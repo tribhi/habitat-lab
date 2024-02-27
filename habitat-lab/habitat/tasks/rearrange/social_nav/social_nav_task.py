@@ -8,6 +8,7 @@ import random
 from typing import Optional, cast
 
 import numpy as np
+import magnum as mn
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
@@ -56,22 +57,18 @@ class PddlSocialNavTask(PddlTask):
             print("all_pos: ", all_pos)
             if force_idx is None:
                 nav_to_pos = all_pos[np.random.randint(0, len(all_pos))]
-                print("------no force_index: ", nav_to_pos)
 
             else:
                 nav_to_pos = all_pos[force_idx]
-                print("------has force_index: ", nav_to_pos)
         else:
             # Select a goal at random and navigate to that goal.
             _, all_pos = self._sim.get_targets()
             nav_to_pos = all_pos[np.random.randint(0, len(all_pos))]
-            print("------- start_hold_obj_index: ", nav_to_pos)
         # if(force_idx is None): #human agent
         #     nav_to_pos = episode.start_position+np.array([1,1,0])
         # else: #robot agent
         #     nav_to_pos = self._sim.pathfinder.get_random_navigable_point_near(
         #         circle_center=episode.start_position, radius=5)
-        nav_to_pos = episode.start_position + np.array([1,1,0])
         print("Set nav_to_pos: ", nav_to_pos, "start position: ", episode.start_position)
         
         def filter_func(start_pos, _):
@@ -121,7 +118,22 @@ class PddlSocialNavTask(PddlTask):
                 agent_id
             ).articulated_agent.base_pos = (
                 self._nav_to_info.articulated_agent_start_pos
+                
             )
+            # KL: print("TEST episode: ", episode.start_position)
+            if agent_id == 0: #robot
+                self._sim.get_agent_data(
+                    agent_id
+                ).articulated_agent.base_pos = (
+                    mn.Vector3(episode.start_position) #for a single episode
+                )
+            elif agent_id == 1: #human
+                self._sim.get_agent_data(
+                    agent_id
+                ).articulated_agent.base_pos = (
+                    mn.Vector3(episode.info["human_start"])
+                )
+                
             self._sim.get_agent_data(
                 agent_id
             ).articulated_agent.base_rot = (

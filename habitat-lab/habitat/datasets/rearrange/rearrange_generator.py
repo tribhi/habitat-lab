@@ -872,7 +872,7 @@ class RearrangeEpisodeGenerator:
             goal_receptacles=save_goal_receps,
             markers=self.cfg.markers,
             name_to_receptacle=name_to_receptacle,
-            info={"object_labels": target_refs},
+            info={"object_labels": target_refs, "human_start": [0,0,0], "human_goal": [1,1,0]},
         )
 
     def initialize_sim(self, scene_name: str, dataset_path: str) -> None:
