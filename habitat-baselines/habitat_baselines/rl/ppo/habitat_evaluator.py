@@ -25,7 +25,7 @@ from habitat_baselines.utils.common import (
     is_continuous_action_space,
 )
 from habitat_baselines.utils.info_dict import extract_scalars_from_info
-
+from IPython import embed
 
 class HabitatEvaluator(Evaluator):
     """
@@ -126,6 +126,7 @@ class HabitatEvaluator(Evaluator):
             len(stats_episodes) < (number_of_eval_episodes * evals_per_ep)
             and envs.num_envs > 0
         ):
+            logger.info("###### episodes evaluation ###")
             current_episodes_info = envs.current_episodes()
 
             space_lengths = {}
