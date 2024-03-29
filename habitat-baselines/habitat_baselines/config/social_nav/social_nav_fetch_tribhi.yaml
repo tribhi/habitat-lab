@@ -66,27 +66,21 @@ habitat_baselines:
           use_std_param: True
       agent_1:
         hierarchical_policy:
-          high_level_policy:
-            add_arm_rest: False
-            policy_input_keys:
-              - "head_depth"
-              - "is_holding"
-              - "obj_start_gps_compass"
-              - "obj_goal_gps_compass"
-              - "other_agent_gps"
-              - "obj_start_sensor"
-              - "obj_goal_sensor"
-            allowed_actions:
-              - nav_to_goal
-              - nav_to_obj
-              - pick
-              - place
-              - nav_to_receptacle_by_name
+          # high_level_policy:
+          #   add_arm_rest: False
+          #   policy_input_keys:
+          #     - "dist_to_goal"
+          #   allowed_actions:
+          #     - nav_to_goal
+              # - nav_to_obj
+              # - pick
+              # - place
+              # - nav_to_receptacle_by_name
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
-            nav_to_randcoord:
+            nav_to_obj:
               skill_name: "OracleNavCoordPolicy"
-              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+              # obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
               max_skill_steps: 1500
               ignore_grip: True
     ppo:

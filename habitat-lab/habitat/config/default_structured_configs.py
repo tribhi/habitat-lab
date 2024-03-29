@@ -1649,6 +1649,9 @@ class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "third_rgb"
     width: int = 512
     height: int = 512
+    # position: List[float] = [0, 1.39, 0]
+    # Euler's angles:
+    # orientation: List[float] = [-1.519, 0.0, 0.0]
 
 
 @dataclass

@@ -15,10 +15,11 @@ from habitat.articulated_agents.mobile_manipulator import (
     MobileManipulatorParams,
 )
 from habitat_sim.utils.common import orthonormalize_rotation_shear
-
+from IPython import embed
 
 class KinematicHumanoid(MobileManipulator):
     def _get_humanoid_params(self):
+        print("Seeting the new camera")
         return MobileManipulatorParams(
             arm_joints=[],  # For now we do not add arm_joints
             gripper_joints=[],
@@ -40,10 +41,16 @@ class KinematicHumanoid(MobileManipulator):
                     cam_look_at_pos=mn.Vector3(0.0, 0.5, 0.75),
                     attached_link_id=-1,
                 ),
+                # "third": ArticulatedAgentCameraParams(
+                #     cam_offset_pos=mn.Vector3(-1.2, 2.0, -1.2),
+                #     cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
+                #     attached_link_id=-2,
+                # ),
                 "third": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(-1.2, 2.0, -1.2),
-                    cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
-                    attached_link_id=-2,
+                    cam_offset_pos=mn.Vector3(-9.0559,3.39,8.9988),
+                    cam_look_at_pos=mn.Vector3(0.0, 0.0, 0.0),
+                    cam_orientation=mn.Vector3(-1.59,0.,0.),
+                    attached_link_id=-3,
                 ),
             },
             arm_mtr_pos_gain=0.3,
@@ -59,6 +66,7 @@ class KinematicHumanoid(MobileManipulator):
     def __init__(
         self, agent_cfg, sim, limit_robo_joints=False, fixed_base=False
     ):
+        print("In the humanoid")
         super().__init__(
             self._get_humanoid_params(),
             agent_cfg,
@@ -179,36 +187,52 @@ class KinematicHumanoid(MobileManipulator):
                     elif cam_info.attached_link_id == -2:
                         rot_offset = self.offset_transform_base.inverted()
                         link_trans = self.base_transformation @ rot_offset
+                    elif cam_info.attached_link_id == -3:
+                        rot_offset = self.offset_transform_base.inverted()
+                        link_trans = self.base_transformation @ rot_offset
                     else:
                         link_trans = self.sim_obj.get_link_scene_node(
                             cam_info.attached_link_id
                         ).transformation
 
-                    if cam_info.cam_look_at_pos == mn.Vector3(0, 0, 0):
-                        pos = cam_info.cam_offset_pos
-                        ori = cam_info.cam_orientation
-                        Mt = mn.Matrix4.translation(pos)
-                        Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
-                        My = mn.Matrix4.rotation_y(mn.Rad(ori[1]))
-                        Mx = mn.Matrix4.rotation_x(mn.Rad(ori[0]))
-                        cam_transform = Mt @ Mz @ My @ Mx
-                    else:
-                        cam_transform = mn.Matrix4.look_at(
-                            cam_info.cam_offset_pos,
-                            cam_info.cam_look_at_pos,
-                            mn.Vector3(0, 1, 0),
+                    if cam_info.attached_link_id != -3:
+                        if cam_info.cam_look_at_pos == mn.Vector3(0, 0, 0):
+                            pos = cam_info.cam_offset_pos
+                            ori = cam_info.cam_orientation
+                            Mt = mn.Matrix4.translation(pos)
+                            Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
+                            My = mn.Matrix4.rotation_y(mn.Rad(ori[1]))
+                            Mx = mn.Matrix4.rotation_x(mn.Rad(ori[0]))
+                            cam_transform = Mt @ Mz @ My @ Mx
+                        else:
+                            cam_transform = mn.Matrix4.look_at(
+                                cam_info.cam_offset_pos,
+                                cam_info.cam_look_at_pos,
+                                mn.Vector3(0, 1, 0),
+                            )
+                        cam_transform = (
+                            link_trans
+                            @ cam_transform
+                            @ cam_info.relative_transform
                         )
-                    cam_transform = (
-                        link_trans
-                        @ cam_transform
-                        @ cam_info.relative_transform
-                    )
-                    cam_transform = inv_T @ cam_transform
+                        cam_transform = inv_T @ cam_transform
 
-                    sens_obj.node.transformation = (
-                        orthonormalize_rotation_shear(cam_transform)
-                    )
-
+                        sens_obj.node.transformation = (
+                            orthonormalize_rotation_shear(cam_transform)
+                        )
+                    else:
+                        # pos = cam_info.cam_offset_pos
+                        # ori = cam_info.cam_orientation
+                        # Mt = mn.Matrix4.translation(pos)
+                        # Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
+                        # My = mn.Matrix4.rotation_y(mn.Rad(ori[1]))
+                        # Mx = mn.Matrix4.rotation_x(mn.Rad(ori[0]))
+                        # cam_transform = Mt @ Mz @ My @ Mx
+                        # sens_obj.node.transformation = (
+                        #     cam_transform
+                        # )
+                        pass
+                    # print("Transform for ", sensor_name, " is ", sens_obj.node.transformation)
         if self._fix_joint_values is not None:
             self.arm_joint_pos = self._fix_joint_values
 

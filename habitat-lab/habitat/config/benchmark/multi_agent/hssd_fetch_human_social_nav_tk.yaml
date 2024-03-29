@@ -8,6 +8,8 @@ defaults:
   - /habitat/simulator/agents@habitat.simulator.agents.agent_0: fetch
   - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_1: rgbd_head_agent
   - /habitat/simulator/agents@habitat.simulator.agents.agent_1: human
+  # - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.fourth_rgb_sensor: third_rgb_sensor
+
   # Config agent hssd data
   - /habitat/dataset/rearrangement: hssd
   # Config agent action
@@ -63,9 +65,9 @@ habitat:
         y_len: 1.5
         agent_idx: 1
       agent_0_goal_to_agent_gps_compass:
-        goal_is_human: True
+        goal_is_human: False
     type: RearrangePddlSocialNavTask-v0
-    min_start_distance: 4.0
+    min_start_distance: 0.0
     reward_measure: social_nav_reward
     # KL: success_measure: nav_seek_success
     success_measure: social_nav_to_pos_success
@@ -73,9 +75,9 @@ habitat:
     slack_reward: -0.01
     end_on_success: True
     task_spec_base_path: benchmark/multi_agent/
-    task_spec: pddl/multi_agent_tidy_house
+    task_spec: pddl/multi_agent_social_nav
     pddl_domain_def: fp
-    min_distance_start_agents: 5.0
+    min_distance_start_agents: 0.0
     constraint_violation_ends_episode: False
     constraint_violation_drops_object: True
 
@@ -135,16 +137,17 @@ habitat:
       - agent_0_localization_sensor
       
       - agent_1_head_depth
-      - agent_1_relative_resting_position
-      - agent_1_obj_start_sensor
-      - agent_1_obj_goal_sensor
-      - agent_1_obj_start_gps_compass
-      - agent_1_obj_goal_gps_compass
-      - agent_1_is_holding
+      # - agent_1_dist_to_goal
+      # - agent_1_obj_start_sensor
+      # - agent_1_obj_goal_sensor
+      # - agent_1_obj_start_gps_compass
+      # - agent_1_obj_goal_gps_compass
+      # - agent_1_is_holding
       - agent_1_ee_pos
       - agent_1_localization_sensor
       - agent_1_has_finished_oracle_nav
       - agent_1_other_agent_gps
+      - agent_1_third_rgb_sensor
       # KL:humanoid detector sensor
       # - agent_1_articulated_agent_arm_panoptic
 
@@ -176,8 +179,26 @@ habitat:
           head_depth_sensor:
             height: 128
             width: 128
-          
+          third_rgb_sensor:
+            height: 128
+            width: 128
         joint_start_noise: 0.0
+      # agent_1:
+      #   sim_sensors:
+      #     third_rgb_sensor:
+      #       height: 1080
+      #       width: 1920
+      #       # uuid: third_rgb
+      #       position:
+      #         - 9.5
+      #         - 15.0
+      #         - -4.0
+      #       orientation:
+      #         - -1.57
+      #         - 0.0
+      #         - 0.0
+
+        
 
     kinematic_mode: True
     ac_freq_ratio: 1
@@ -188,6 +209,6 @@ habitat:
       enable_physics: True
   dataset:
     # data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz
-    data_path: /habitat-lab/data/social_nav_episode_6_1000.json.gz
+    data_path: /habitat-lab/data/social_nav_episode_7_15.json.gz
     # data_path: data/social_nav_episode_mp3d.json.gz
     # data_path: /habitat-lab/data/versioned_data/hab3_episodes/{split}/social_rearrange.json.gz
