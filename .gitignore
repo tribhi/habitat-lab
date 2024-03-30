@@ -93,6 +93,7 @@ data
 
 # habitat_baselines outputs
 /videos
+/video_dir
 /train_dir
 /tb
 /tb_old

@@ -8,7 +8,7 @@ defaults:
   - /habitat/simulator/agents@habitat.simulator.agents.agent_0: fetch
   - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_1: rgbd_head_agent
   - /habitat/simulator/agents@habitat.simulator.agents.agent_1: human
-  # - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.fourth_rgb_sensor: third_rgb_sensor
+  # - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
 
   # Config agent hssd data
   - /habitat/dataset/rearrangement: hssd
@@ -131,23 +131,23 @@ habitat:
   gym:
     obs_keys:
       - agent_0_head_depth
-      - agent_0_obj_goal_sensor
+      - agent_0_social_dist_to_goal
       - agent_0_humanoid_detector_sensor
       # added obs_keys
       - agent_0_localization_sensor
-      
+    
       - agent_1_head_depth
-      # - agent_1_dist_to_goal
-      # - agent_1_obj_start_sensor
-      # - agent_1_obj_goal_sensor
-      # - agent_1_obj_start_gps_compass
-      # - agent_1_obj_goal_gps_compass
-      # - agent_1_is_holding
+      - agent_1_relative_resting_position
+      - agent_1_obj_start_sensor
+      - agent_1_obj_goal_sensor
+      - agent_1_obj_start_gps_compass
+      - agent_1_obj_goal_gps_compass
+      - agent_1_is_holding
       - agent_1_ee_pos
       - agent_1_localization_sensor
       - agent_1_has_finished_oracle_nav
       - agent_1_other_agent_gps
-      - agent_1_third_rgb_sensor
+      # - agent_1_third_rgb_sensor
       # KL:humanoid detector sensor
       # - agent_1_articulated_agent_arm_panoptic
 
@@ -179,16 +179,16 @@ habitat:
           head_depth_sensor:
             height: 128
             width: 128
-          third_rgb_sensor:
-            height: 128
-            width: 128
+          # third_rgb_sensor:
+          #   height: 128
+          #   width: 128
         joint_start_noise: 0.0
       # agent_1:
       #   sim_sensors:
       #     third_rgb_sensor:
-      #       height: 1080
-      #       width: 1920
-      #       # uuid: third_rgb
+      #       height: 512
+      #       width: 512
+      #       uuid: third_rgb
       #       position:
       #         - 9.5
       #         - 15.0
