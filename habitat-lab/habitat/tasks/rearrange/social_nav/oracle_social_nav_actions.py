@@ -81,13 +81,16 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
         )
         if np.linalg.norm(nav_to_target_coord) == 0:
             return {}
-        final_nav_targ, obj_targ_pos = self._get_target_for_coord(
+        final_nav_targ, obj_targ_pos = self._get_target_for_coord( #debug
             nav_to_target_coord
         )
+        final_nav_targ = self._task.nav_goal_pos #kl
+        obj_targ_pos  = self._task.nav_goal_pos
         #KL: generate humanoidpath from here
         base_T = self.cur_articulated_agent.base_transformation
         curr_path_points = self._path_to_point(final_nav_targ)
         robot_pos = np.array(self.cur_articulated_agent.base_pos)
+
         if curr_path_points is None:
             raise Exception
         else:
@@ -150,7 +153,7 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
                             # Move towards the target
                             vel = [self._config.forward_velocity, 0]
                         else:
-                            # Look at the target waypoint.
+                            HumanoidJointAction# Look at the target waypoint.
                             vel = OracleNavAction._compute_turn(
                                 rel_targ,
                                 self._config.turn_velocity,
@@ -196,6 +199,7 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
                 raise ValueError(
                     "Unrecognized motion type for oracle nav action"
                 )
+            
 
 
 @registry.register_task_action
@@ -231,7 +235,6 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
         self.skill_done = False
         self.coord_nav = self._task.nav_goal_pos
         # self.coord_nav = None
-        print("TEST COORD_NAV nav_goal_pos: ", self.coord_nav)
 
     def _find_path_given_start_end(self, start, end):
         """Helper function to find the path given starting and end locations"""
@@ -329,62 +332,75 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
         max_tries = 10
         self.skill_done = False
         
-        #KL: test human agent pos
+        # #KL: test human agent pos
         # robot_pos = self._sim.get_agent_data(0).articulated_agent.base_pos
         # human_pos = self._sim.get_agent_data(1).articulated_agent.base_pos
         # print("TEST in step: ", robot_pos, human_pos)
         # print("-------TEST in step for COORD_NAV:", self.coord_nav, "is called--------")
 
 
-        if self.coord_nav is None:
-            self.coord_nav = self._sim.pathfinder.get_random_navigable_point(
-                max_tries,
-                island_index=self._sim.largest_island_idx,
-            )
+        # if self.coord_nav is None:
+        #     self.coord_nav = self._sim.pathfinder.get_random_navigable_point(
+        #         max_tries,
+        #         island_index=self._sim.largest_island_idx,
+        #     )
 
         kwargs[
             self._action_arg_prefix + "oracle_nav_coord_action"
+        ] = self.coord_nav
+        #KL: debug
+        kwargs[
+            self._action_arg_prefix + "oracle_nav_randcoord_action"
         ] = self.coord_nav
 
         ret_val = super().step(*args, **kwargs)
         # if self.skill_done:
         #     self.coord_nav = None
 
-        # If the robot is nearby, the human starts to walk, otherwise, the human
-        # just stops there and waits for robot to find it
-        if self._config.human_stop_and_walk_to_robot_distance_threshold != -1:
-            assert (
-                len(self._sim.agents_mgr) == 2
-            ), "Does not support more than two agents when you want human to stop and walk based on the distance to the robot"
-            robot_id = int(1 - self._agent_index)
-            robot_pos = self._sim.get_agent_data(
-                robot_id
-            ).articulated_agent.base_pos
-            human_pos = self.cur_articulated_agent.base_pos
-            dis = self._sim.geodesic_distance(robot_pos, human_pos)
-            # The human needs to stop and wait for robot to come if the distance is too larget
-            if (
-                dis
-                > self._config.human_stop_and_walk_to_robot_distance_threshold
-            ):
-                self.humanoid_controller.set_framerate_for_linspeed(
-                    0.0, 0.0, self._sim.ctrl_freq
-                )
-            # The human needs to walk otherwise
-            else:
-                speed = np.random.uniform(
-                    self._config.lin_speed / 5.0, self._config.lin_speed
-                )
-                lin_speed = speed
-                ang_speed = speed
-                self.humanoid_controller.set_framerate_for_linspeed(
-                    lin_speed, ang_speed, self._sim.ctrl_freq
-                )
+        # # If the robot is nearby, the human starts to walk, otherwise, the human
+        # # just stops there and waits for robot to find it
+        # if self._config.human_stop_and_walk_to_robot_distance_threshold != -1:
+        #     assert (
+        #         len(self._sim.agents_mgr) == 2
+        #     ), "Does not support more than two agents when you want human to stop and walk based on the distance to the robot"
+        #     robot_id = int(1 - self._agent_index)
+        #     robot_pos = self._sim.get_agent_data(
+        #         robot_id
+        #     ).articulated_agent.base_pos
+        #     human_pos = self.cur_articulated_agent.base_pos
+        #     dis = self._sim.geodesic_distance(robot_pos, human_pos)
+        #     # The human needs to stop and wait for robot to come if the distance is too larget
+        #     if (
+        #         dis
+        #         > self._config.human_stop_and_walk_to_robot_distance_threshold
+        #     ):
+        #         self.humanoid_controller.set_framerate_for_linspeed(
+        #             0.0, 0.0, self._sim.ctrl_freq
+        #         )
+        #     # The human needs to walk otherwise
+        #     else:
+        #         speed = np.random.uniform(
+        #             self._config.lin_speed / 5.0, self._config.lin_speed
+        #         )
+        #         lin_speed = speed
+        #         ang_speed = speed
+        #         self.humanoid_controller.set_framerate_for_linspeed(
+        #             lin_speed, ang_speed, self._sim.ctrl_freq
+        #         )
+        speed = np.random.uniform(
+            self._config.lin_speed / 5.0, self._config.lin_speed
+        )
+        lin_speed = speed
+        ang_speed = speed
+        self.humanoid_controller.set_framerate_for_linspeed(
+            lin_speed, ang_speed, self._sim.ctrl_freq
+        )
 
         try:
             kwargs["task"].measurements.measures[
                 "social_nav_stats"
             ].update_human_pos = self.coord_nav
+
         except Exception:
             pass
         return ret_val

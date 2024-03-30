@@ -823,6 +823,7 @@ class HumanoidJointAction(ArticulatedAgentAction):
             The first elements correspond to a flattened list of quaternions for each joint.
             When the array is all 0 it keeps the previous joint rotation and transform.
         """
+
         human_joints_trans = kwargs[
             self._action_arg_prefix + "human_joints_trans"
         ]
@@ -843,12 +844,13 @@ class HumanoidJointAction(ArticulatedAgentAction):
             ]
             new_transform_offset = mn.Matrix4(*vecs_offset)
             new_transform_base = mn.Matrix4(*vecs_base)
+
             if (
                 new_transform_offset.is_rigid_transformation()
                 and new_transform_base.is_rigid_transformation()
             ):
                 # TODO: this will cause many sampled actions to be invalid
                 # Maybe we should update the sampling mechanism
-                self.cur_articulated_agent.set_joint_transform(
+                self.cur_articulated_agent.set_joint_transform( #KL: debug here: this move the agent towards the goal
                     new_joints, new_transform_offset, new_transform_base
                 )

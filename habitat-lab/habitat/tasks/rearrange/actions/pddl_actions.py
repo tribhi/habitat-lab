@@ -69,7 +69,6 @@ class PddlApplyAction(ArticulatedAgentAction):
                         )
 
                 param_values = [self.entities[i] for i in real_action_idxs]
-
                 # Look up the most recent version of this action.
                 apply_action = self._task.pddl_problem.actions[
                     action.name
@@ -77,10 +76,11 @@ class PddlApplyAction(ArticulatedAgentAction):
                 apply_action.set_param_values(param_values)
                 self._prev_action = apply_action
 
-                if not apply_action.apply_if_true(
-                    self._task.pddl_problem.sim_info
-                ):
-                    self._was_prev_action_invalid = True
+                # debug
+                # if not apply_action.apply_if_true(
+                #     self._task.pddl_problem.sim_info
+                # ):
+                #     self._was_prev_action_invalid = True
 
             cur_i += action.n_args
 
