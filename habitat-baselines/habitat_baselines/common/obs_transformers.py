@@ -39,7 +39,7 @@ from habitat_baselines.utils.common import (
     image_resize_shortest_edge,
     overwrite_gym_box_shape,
 )
-
+from IPython import embed
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
@@ -1202,10 +1202,10 @@ def get_active_obs_transforms(
     config: "DictConfig", agent_name: str = None
 ) -> List[ObservationTransformer]:
     active_obs_transforms = []
-
+    if (agent_name is None):
     # When using observation transformations, we
     # assume for now that the observation space is shared among agents
-    agent_name = list(config.habitat_baselines.rl.policy.keys())[0]
+        agent_name = list(config.habitat_baselines.rl.policy.keys())[0]
     obs_trans_conf = config.habitat_baselines.rl.policy[
         agent_name
     ].obs_transforms

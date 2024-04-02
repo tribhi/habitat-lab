@@ -17,8 +17,8 @@ from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.pddl_task import PddlTask
-from habitat.tasks.rearrange.sub_tasks.nav_to_obj_task import NavToInfo
-
+from habitat.tasks.rearrange.sub_tasks.nav_to_obj_task import NavToInfo, MyNavToInfo
+from IPython import embed
 
 @registry.register_task(name="RearrangePddlSocialNavTask-v0")
 class PddlSocialNavTask(PddlTask):
@@ -27,7 +27,7 @@ class PddlSocialNavTask(PddlTask):
     """
 
     _nav_to_info: Optional[NavToInfo]
-
+    my_nav_to_info: Optional[MyNavToInfo]
     def __init__(self, *args, config, dataset=None, **kwargs):
         super().__init__(config=config, *args, dataset=dataset, **kwargs)
         self.force_obj_to_idx = None
@@ -35,6 +35,7 @@ class PddlSocialNavTask(PddlTask):
         self._object_in_hand_sample_prob = config.object_in_hand_sample_prob
         self._min_start_distance = config.min_start_distance
         self._initial_robot_trans = None
+        
 
     def _generate_snap_to_obj(self) -> int:
         # Snap the target object to the articulated_agent hand.
@@ -99,6 +100,7 @@ class PddlSocialNavTask(PddlTask):
             circle_center=np.array(episode.info["human_start"]),
             radius=2
             )
+            nav_to_pos = np.array(episode.info["human_start"])
         elif agent_idx == 1: #human
             articulated_agent_pos = np.array(episode.info["human_start"])
             articulated_agent_angle = episode.start_rotation[3]*1.0
@@ -134,12 +136,17 @@ class PddlSocialNavTask(PddlTask):
         print("TEST ORIGINAL agent base_pos:")
         print("robot base_pos: ", self._sim.get_agent_data(0).articulated_agent.base_pos)
         print("human base_pos: ", self._sim.get_agent_data(1).articulated_agent.base_pos)
+        
         for agent_id in range(self._sim.num_articulated_agents):
             #KL
             print("------------Get Agent ID: ", agent_id, "--------------", self.force_obj_to_idx)
             self._nav_to_info = self._generate_nav_start_goal(
                     episode, agent_id, force_idx=self.force_obj_to_idx
                 )
+            if (agent_id == 0):
+                robot_info = self._nav_to_info
+            else:
+                human_info = self._nav_to_info
             self._sim.get_agent_data(
                 agent_id
             ).articulated_agent.base_pos = (
@@ -152,9 +159,9 @@ class PddlSocialNavTask(PddlTask):
             ).articulated_agent.base_rot = (
                 self._nav_to_info.articulated_agent_start_angle
             )
-
+        self.my_nav_to_info = MyNavToInfo(robot_info, human_info)
         super().reset(episode)
-
+        
         self.pddl_problem.bind_to_instance(
             self._sim, cast(RearrangeDatasetV0, self._dataset), self, episode
         )

@@ -58,15 +58,19 @@ class NavGoalPointGoalSensor(UsesArticulatedAgentInterface, Sensor):
         ).articulated_agent.base_transformation
         # Make the goal to be the human location
         if self._goal_is_human:
+            print("It assumes the goal is human")
             human_pos = self._sim.get_agent_data(
                 self._human_agent_idx
             ).articulated_agent.base_pos
             task.nav_goal_pos = np.array(human_pos)
-
-        dir_vector = articulated_agent_T.inverted().transform_point(
-            task.nav_goal_pos
-        )
-
+        if (self.agent_id == 1):
+            dir_vector = articulated_agent_T.inverted().transform_point(
+                self._task.my_nav_to_info.human_info.nav_goal_pos
+            )
+        else:
+            dir_vector = articulated_agent_T.inverted().transform_point(
+                np.array(self._task.my_nav_to_info.robot_info.nav_goal_pos)
+            )
         rho, phi = cartesian_to_polar(dir_vector[0], dir_vector[1])
         return np.array([rho, -phi], dtype=np.float32)
 
@@ -187,13 +191,17 @@ class DistToGoal(UsesArticulatedAgentInterface, Measure):
         )
 
     def _get_cur_geo_dist(self, task):
+        if (self.agent_id == 0):
+            goal = task.my_nav_to_info.robot_info.nav_goal_pos
+        else:
+            goal = task.my_nav_to_info.human_info.nav_goal_pos
         return np.linalg.norm(
             np.array(
                 self._sim.get_agent_data(
                     self.agent_id
                 ).articulated_agent.base_pos
             )[[0, 2]]
-            - task.nav_goal_pos[[0, 2]]
+            - goal[[0, 2]]
         )
 
     @staticmethod
@@ -223,7 +231,11 @@ class RotDistToGoal(UsesArticulatedAgentInterface, Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        targ = task.nav_goal_pos
+        if self.agent_id == 0:
+            goal = task.my_nav_to_info.robot_info.nav_goal_pos
+        else:
+            goal = task.my_nav_to_info.human_info.nav_goal_pos
+        targ = goal
         # Get the agent
         robot = self._sim.get_agent_data(self.agent_id).articulated_agent
         # Get the base transformation

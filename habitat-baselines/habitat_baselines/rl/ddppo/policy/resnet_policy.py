@@ -37,7 +37,7 @@ from habitat_baselines.rl.models.rnn_state_encoder import (
 )
 from habitat_baselines.rl.ppo import Net, NetPolicy
 from habitat_baselines.utils.common import get_num_actions
-
+from IPython import embed
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
@@ -120,21 +120,6 @@ class PointNavResNetPolicy(NetPolicy):
         action_space,
         **kwargs,
     ):
-        # Exclude cameras for rendering from the observation space.
-        ignore_names = [
-            sensor.uuid
-            for sensor in config.habitat_baselines.eval.extra_sim_sensors.values()
-        ]
-        filtered_obs = spaces.Dict(
-            OrderedDict(
-                (
-                    (k, v)
-                    for k, v in observation_space.items()
-                    if k not in ignore_names
-                )
-            )
-        )
-
         agent_name = None
         if "agent_name" in kwargs:
             agent_name = kwargs["agent_name"]
@@ -146,6 +131,21 @@ class PointNavResNetPolicy(NetPolicy):
                 )
             else:
                 agent_name = config.habitat.simulator.agents_order[0]
+        # Exclude cameras for rendering from the observation space.
+        ignore_names = [
+            sensor.uuid
+            for sensor in config.habitat_baselines.eval.extra_sim_sensors.values()
+        ]
+        
+        filtered_obs = spaces.Dict(
+            OrderedDict(
+                (
+                    (k, v)
+                    for k, v in observation_space.items()
+                    if k not in ignore_names #and k.startswith(agent_name)
+                )
+            )
+        )
 
         return cls(
             observation_space=filtered_obs,

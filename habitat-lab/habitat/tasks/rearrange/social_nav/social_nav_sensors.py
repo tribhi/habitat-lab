@@ -579,14 +579,19 @@ class SocialDistToGoal(UsesArticulatedAgentInterface, Measure):
         )
 
     def _get_cur_geo_dist(self, task):
+        if (self.agent_id == 0):
+            goal = task.my_nav_to_info.robot_info.nav_goal_pos
+        else:
+            goal = task.my_nav_to_info.human_info.nav_goal_pos
         return np.linalg.norm(
             np.array(
                 self._sim.get_agent_data(
                     self.agent_id
                 ).articulated_agent.base_pos
             )[[0, 2]]
-            - task.nav_goal_pos[[0, 2]]  #KL: FIXME
+            - goal[[0, 2]]
         )
+
 
     @staticmethod
     def _get_uuid(*args, **kwargs):

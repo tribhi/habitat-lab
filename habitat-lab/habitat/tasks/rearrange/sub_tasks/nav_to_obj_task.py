@@ -28,6 +28,16 @@ class NavToInfo:
     articulated_agent_start_angle: float
     start_hold_obj_idx: Optional[int]
 
+@dataclass
+class MyNavToInfo:
+    """
+    :property nav_goal_pos: Where the articulated_agent should navigate to. This is likely
+    on a receptacle and not a navigable position.
+    """
+
+    robot_info: NavToInfo
+    human_info: NavToInfo
+
 
 @registry.register_task(name="NavToObjTask-v0")
 class DynNavRLEnv(RearrangeTask):
