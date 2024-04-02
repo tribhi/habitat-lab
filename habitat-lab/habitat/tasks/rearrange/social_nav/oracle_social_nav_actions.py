@@ -84,8 +84,8 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
         final_nav_targ, obj_targ_pos = self._get_target_for_coord( #debug
             nav_to_target_coord
         )
-        final_nav_targ = self._task.nav_goal_pos #kl
-        obj_targ_pos  = self._task.nav_goal_pos
+        final_nav_targ = self._task.my_nav_to_info.human_info.nav_goal_pos #kl
+        obj_targ_pos  = self._task.my_nav_to_info.human_info.nav_goal_pos
         #KL: generate humanoidpath from here
         base_T = self.cur_articulated_agent.base_transformation
         curr_path_points = self._path_to_point(final_nav_targ)
@@ -233,7 +233,7 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
             self._targets = {}
             self._prev_ep_id = self._task._episode_id
         self.skill_done = False
-        self.coord_nav = self._task.nav_goal_pos
+        self.coord_nav = self._task.my_nav_to_info.human_info.nav_goal_pos
         # self.coord_nav = None
 
     def _find_path_given_start_end(self, start, end):

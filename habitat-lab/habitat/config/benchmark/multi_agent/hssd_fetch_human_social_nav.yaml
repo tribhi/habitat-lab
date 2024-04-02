@@ -94,6 +94,10 @@ habitat:
         max_count_colls: 1000
         count_coll_end_pen: 1.0
         safe_dis_min: 0.2
+      # social_nav_to_pos_success:
+      #   success_distance: 0.1
+      # nav_to_pos_success:
+      #   success_distance: 0.1
 
     actions:
       agent_0_base_velocity:

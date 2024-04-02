@@ -24,7 +24,7 @@ habitat_baselines:
   distrib_updater_name: "HRLDDPPO"
   torch_gpu_id: 0
   video_fps: 30
-  eval_ckpt_path_dir: "data/checkpoints"
+  eval_ckpt_path_dir: "data/checkpoints/ckpt.6.pth"
   checkpoint_folder: "data/checkpoints"
   num_environments: 1  #modified from 18
   num_updates: -1
@@ -35,7 +35,7 @@ habitat_baselines:
   eval_keys_to_include_in_name: ['pddl_success']
   load_resume_state_config: True
   rollout_storage_name: "HrlRolloutStorage"
-  tensorboard_dir: "tb_fixed_sensor"
+  tensorboard_dir: "tb_fixed_sensor_eval"
   evaluate: False
 
   eval:
@@ -86,7 +86,7 @@ habitat_baselines:
           defined_skills:
             nav_to_randcoord:
               skill_name: "OracleNavCoordPolicy"
-              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "nav_goal_sensor", "abs_obj_goal_sensor"]
               max_skill_steps: 1500
               ignore_grip: True
     ppo:

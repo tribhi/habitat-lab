@@ -53,6 +53,8 @@ class NavGoalPointGoalSensor(UsesArticulatedAgentInterface, Sensor):
         )
 
     def get_observation(self, task, *args, **kwargs):
+        if (self.agent_id is None):
+            self.agent_id = 0
         articulated_agent_T = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent.base_transformation
@@ -109,7 +111,8 @@ class OracleNavigationActionSensor(Sensor):
         return path.points
 
     def get_observation(self, task, *args, **kwargs):
-        path = self._path_to_point(task.nav_target_pos)
+        print("Oracle nav sensor ", task.my_nav_to_info.human_info.nav_goal_pos)
+        path = self._path_to_point(task.my_nav_to_info.human_info.nav_goal_pos)
         return path[1]
 
 
@@ -191,10 +194,15 @@ class DistToGoal(UsesArticulatedAgentInterface, Measure):
         )
 
     def _get_cur_geo_dist(self, task):
+        if (self.agent_id is None):
+            self.agent_id = 0
         if (self.agent_id == 0):
             goal = task.my_nav_to_info.robot_info.nav_goal_pos
+            # print("For robot goal is ", goal, "pos is " ,self._sim.get_agent_data(self.agent_id).articulated_agent.base_pos)
         else:
             goal = task.my_nav_to_info.human_info.nav_goal_pos
+            # print("For human goal is ", goal, "pos is " ,self._sim.get_agent_data(self.agent_id).articulated_agent.base_pos)
+    
         return np.linalg.norm(
             np.array(
                 self._sim.get_agent_data(
@@ -231,6 +239,8 @@ class RotDistToGoal(UsesArticulatedAgentInterface, Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
+        if (self.agent_id is None):
+            self.agent_id = 0
         if self.agent_id == 0:
             goal = task.my_nav_to_info.robot_info.nav_goal_pos
         else:
@@ -275,6 +285,7 @@ class NavToPosSucc(Measure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
         self._metric = dist < self._config.success_distance
+        # print("navtopos dist is ", dist)
 
 
 @registry.register_measure

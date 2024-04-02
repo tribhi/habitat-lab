@@ -117,7 +117,7 @@ class PddlSocialNavTask(PddlTask):
 
     @property
     def nav_goal_pos(self):
-        return self._nav_to_info.nav_goal_pos
+        return self.my_nav_to_info.robot_info.nav_goal_pos
 
     @nav_goal_pos.setter
     def nav_goal_pos(self, value):

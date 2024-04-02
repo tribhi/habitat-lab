@@ -30,7 +30,7 @@ from habitat.tasks.rearrange.utils import (
     batch_transform_point,
 )
 from habitat.tasks.utils import cartesian_to_polar
-
+from IPython import embed
 BASE_ACTION_NAME = "base_velocity"
 
 
@@ -253,6 +253,8 @@ class SocialNavStats(UsesArticulatedAgentInterface, Measure):
         return SocialNavStats.cls_uuid
 
     def reset_metric(self, *args, task, **kwargs):
+        if (self.agent_id is None):
+            self.agent_id = 0
         robot_pos = np.array(
             self._sim.get_agent_data(self.agent_id).articulated_agent.base_pos
         )
@@ -579,10 +581,14 @@ class SocialDistToGoal(UsesArticulatedAgentInterface, Measure):
         )
 
     def _get_cur_geo_dist(self, task):
+        if (self.agent_id is None):
+            self.agent_id = 0
         if (self.agent_id == 0):
             goal = task.my_nav_to_info.robot_info.nav_goal_pos
+            # print("For robot goal is ", goal, "pos is " ,self._sim.get_agent_data(self.agent_id).articulated_agent.base_pos)
         else:
             goal = task.my_nav_to_info.human_info.nav_goal_pos
+            # print("For human goal is ", goal, "pos is " ,self._sim.get_agent_data(self.agent_id).articulated_agent.base_pos)
         return np.linalg.norm(
             np.array(
                 self._sim.get_agent_data(
@@ -622,6 +628,7 @@ class SocialNavToPosSucc(Measure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         dist = task.measurements.measures[SocialDistToGoal.cls_uuid].get_metric()
         self._metric = dist < self._config.success_distance
+        # print("social navtopos distance is ", dist)
 
 
 ###########################################
@@ -757,6 +764,8 @@ class InitialGpsCompassSensor(UsesArticulatedAgentInterface, Sensor):
         )
 
     def get_observation(self, task, *args, **kwargs):
+        if (self.agent_id is None):
+            self.agent_id = 0
         agent_data = self._sim.get_agent_data(self.agent_id).articulated_agent
         agent_pos = np.array(agent_data.base_pos)
         init_articulated_agent_T = task.initial_robot_trans
