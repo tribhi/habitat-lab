@@ -72,7 +72,7 @@ habitat:
     # KL: success_measure: nav_seek_success
     success_measure: social_nav_to_pos_success
     success_reward: 10.0
-    slack_reward: -0.01
+    slack_reward: -0.1 # Tried 0.01 before 
     end_on_success: True
     task_spec_base_path: benchmark/multi_agent/
     task_spec: pddl/multi_agent_social_nav
@@ -84,15 +84,15 @@ habitat:
     measurements:
       rearrange_cooperate_reward:
         stage_sparse_reward: 5.0
-        end_on_collide: True
+        end_on_collide: False
         collide_penalty: 0.5
       force_terminate:
         max_accum_force: -1
         max_instant_force: -1
       social_nav_reward:
-        count_coll_pen: 0.25
-        max_count_colls: 1000
-        count_coll_end_pen: 1.0
+        count_coll_pen: 0.01  # Tried 0.25 before slow 
+        max_count_colls: -1 # Tried 1000 before 
+        count_coll_end_pen: 5.0 # Tried 1 before 
         safe_dis_min: 0.2
       # social_nav_to_pos_success:
       #   success_distance: 0.1
@@ -111,9 +111,9 @@ habitat:
         # If we allow the robot to move laterally
         enable_lateral_move: False
         # speed parameters
-        longitudinal_lin_speed: 5.0
-        lateral_lin_speed: 5.0
-        ang_speed: 5.0
+        longitudinal_lin_speed: 10.0 # Tried 5 before for all 
+        lateral_lin_speed: 10.0
+        ang_speed: 10.0
         enable_rotation_check_for_dyn_slide: False
 
       # agent_1_oracle_nav_action:
@@ -127,8 +127,8 @@ habitat:
       agent_1_oracle_nav_randcoord_action:
         type: OracleNavRandCoordAction
         motion_control: human_joints
-        lin_speed: 5.0
-        ang_speed: 5.0
+        lin_speed: 10.0  # Tried 5 before 
+        ang_speed: 10.0 # Tried 5 before 
 
     robot_at_thresh: 3.0
 
@@ -139,6 +139,7 @@ habitat:
       - agent_0_humanoid_detector_sensor
       # added obs_keys
       - agent_0_localization_sensor
+      - agent_0_other_agent_gps
       
       - agent_1_head_depth
       - agent_1_relative_resting_position
@@ -204,7 +205,7 @@ habitat:
         
 
     kinematic_mode: True
-    ac_freq_ratio: 1
+    ac_freq_ratio: 4 # Tried 1 before 
     step_physics: False
 
     habitat_sim_v0:
@@ -212,6 +213,6 @@ habitat:
       enable_physics: True
   dataset:
     # data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz
-    data_path: /habitat-lab/data/social_nav_episode_7_15.json.gz
+    data_path: /habitat-lab/data/social_nav_episode_0403_570.json.gz
     # data_path: data/social_nav_episode_mp3d.json.gz
     # data_path: /habitat-lab/data/versioned_data/hab3_episodes/{split}/social_rearrange.json.gz

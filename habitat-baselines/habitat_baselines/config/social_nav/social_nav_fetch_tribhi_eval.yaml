@@ -2,15 +2,15 @@
 
 defaults:
   - /benchmark/multi_agent: hssd_fetch_human_social_nav
-  # - /habitat_baselines: habitat_baselines_rl_config_base
+  - /habitat_baselines: habitat_baselines_rl_config_base
   - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
-  # - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_0.obs_transforms.add_virtual_keys:
-  #   - add_virtual_keys_base
-  # - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
-  #   - add_virtual_keys_base
-  # - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: monolithic
-  # - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_fixed
-  # - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_human_multi_agent
+  - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_0.obs_transforms.add_virtual_keys:
+    - add_virtual_keys_base
+  - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
+    - add_virtual_keys_base
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: monolithic
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_fixed
+  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_human_multi_agent
   - _self_
 
 hydra:
@@ -24,21 +24,20 @@ habitat_baselines:
   distrib_updater_name: "HRLDDPPO"
   torch_gpu_id: 0
   video_fps: 30
-  eval_ckpt_path_dir: "data/checkpoints/ckpt.9.pth"
+  eval_ckpt_path_dir: "data/checkpoints/ckpt.0.pth"
   checkpoint_folder: "data/checkpoints"
-  num_environments: 1  #modified from 18
+  num_environments: 25  #modified from 18
   num_updates: -1
   total_num_steps: 5.0e7
   log_interval: 10
   num_checkpoints: 100
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['pddl_success']
-  load_resume_state_config: True
+  load_resume_state_config: False
   rollout_storage_name: "HrlRolloutStorage"
   tensorboard_dir: "tb_new_reward"
   evaluate: True
-  checkpoint_interval: -1
-  
+
   eval:
     extra_sim_sensors:
       third_rgb_sensor:
@@ -87,7 +86,7 @@ habitat_baselines:
           defined_skills:
             nav_to_randcoord:
               skill_name: "OracleNavCoordPolicy"
-              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "nav_goal_sensor", "abs_obj_goal_sensor"]
               max_skill_steps: 1500
               ignore_grip: True
     ppo:

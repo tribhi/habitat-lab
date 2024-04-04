@@ -300,7 +300,6 @@ class sim_env(threading.Thread):
             self._pub_depth.publish(np.float32(depth_with_res))
             self.map_to_base_link({'x': initial_pos[0], 'y': initial_pos[1], 'theta': self.get_object_heading(self.env.sim.agents_mgr[0].articulated_agent.base_transformation)})
             lock.release()
-            print("agent 0 dist_to_goal", self.observations['agent_0_goal_to_agent_gps_compass'])
             self._r.sleep()
 
     def update_agent_pos_vel(self):

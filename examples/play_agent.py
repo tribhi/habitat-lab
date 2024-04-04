@@ -179,6 +179,8 @@ class sim_env(threading.Thread):
                     ),
                 )
             )       
+            print("Goal gps is ", self.observations["agent_0_humanoid_detector_sensor"])
+            print("Human pos gps is ", self.observations["agent_0_other_agent_gps"])
             for i in range(self.number_of_agents):
                 agent_pos = self.objs[i].base_pos
                 start_pos = [agent_pos[0], agent_pos[1], agent_pos[2]]

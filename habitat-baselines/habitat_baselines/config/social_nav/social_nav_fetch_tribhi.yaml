@@ -26,7 +26,7 @@ habitat_baselines:
   video_fps: 30
   eval_ckpt_path_dir: "data/checkpoints/ckpt.6.pth"
   checkpoint_folder: "data/checkpoints"
-  num_environments: 1  #modified from 18
+  num_environments: 25  #modified from 18
   num_updates: -1
   total_num_steps: 5.0e7
   log_interval: 10
@@ -35,7 +35,7 @@ habitat_baselines:
   eval_keys_to_include_in_name: ['pddl_success']
   load_resume_state_config: True
   rollout_storage_name: "HrlRolloutStorage"
-  tensorboard_dir: "tb_fixed_sensor_eval"
+  tensorboard_dir: "tb_fixed_sensor"
   evaluate: False
 
   eval:
