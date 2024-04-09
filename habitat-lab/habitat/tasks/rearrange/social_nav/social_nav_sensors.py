@@ -62,8 +62,10 @@ class SocialNavReward(RearrangeReward):
         self._explore_reward = config.explore_reward
         self._use_geo_distance = config.use_geo_distance
         self._collide_penalty = config.collide_penalty
+        self.interm_goal_bonus = 1.0   #Change to get from config 
         # Record the previous distance to human
         self._prev_dist = -1.0
+        self._prev_dist_to_goal = -1.0
         self._robot_idx = config.robot_idx
         self._human_idx = config.human_idx
         # Add exploration reward dictionary tracker
@@ -71,6 +73,7 @@ class SocialNavReward(RearrangeReward):
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         self._prev_dist = -1.0
+        self._prev_dist_to_goal = -1.0
         super().reset_metric(
             *args,
             episode=episode,
@@ -151,26 +154,26 @@ class SocialNavReward(RearrangeReward):
         # # Componet 4: Social nav reward for exploration
         # # There is no exploration reward once the agent finds the human
         # # round off float to nearest 0.5 in python
-        # robot_pos_key = (
-        #     round(robot_pos[0] * 2) / 2,
-        #     round(robot_pos[2] * 2) / 2,
-        # )
-        # social_nav_stats = task.measurements.measures[
-        #     SocialNavStats.cls_uuid
-        # ].get_metric()
-        # if (
-        #     self._explore_reward != -1
-        #     and robot_pos_key not in self._visited_pos
-        #     and social_nav_stats is not None
-        #     and not social_nav_stats["has_found_human"]
-        # ):
-        #     self._visited_pos.add(robot_pos_key)
-        #     # Give the reward if the agent visits the new location
-        #     social_nav_reward += self._explore_reward
+        robot_pos_key = (
+            round(robot_pos[0] * 2) / 2,
+            round(robot_pos[2] * 2) / 2,
+        )
+        social_nav_stats = task.measurements.measures[
+            SocialNavStats.cls_uuid
+        ].get_metric()
+        if (
+            self._explore_reward != -1
+            and robot_pos_key not in self._visited_pos
+        ):
+            self._visited_pos.add(robot_pos_key)
+            # Give the reward if the agent visits the new location
+            social_nav_reward += self._explore_reward
 
         if self._prev_dist < 0:
             social_nav_reward = 0.0
 
+        if self._prev_dist_to_goal < -1.0:
+            social_nav_reward = 0.0
         # Componet 5: Collision detection for two agents
         did_collide = task.measurements.measures[
             DidAgentsCollide._get_uuid()
@@ -183,10 +186,15 @@ class SocialNavReward(RearrangeReward):
             if dis <self._safe_dis_min:
                 social_nav_reward -= (self._safe_dis_min - dis)
 
-        self._metric += social_nav_reward
+        goal = task.my_nav_to_info.robot_info.nav_goal_pos
 
+        dist_to_goal = np.linalg.norm(np.array(robot_pos)[[0, 2]]- goal[[0, 2]])
+        social_nav_reward += self.interm_goal_bonus * (self._prev_dist_to_goal - dist_to_goal)
+
+        self._metric += social_nav_reward
         # Update the distance
         self._prev_dist = dis  # type: ignore
+        self._prev_dist_to_goal = dist_to_goal
 
 
 @registry.register_measure

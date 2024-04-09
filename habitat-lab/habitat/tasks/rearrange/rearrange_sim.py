@@ -483,7 +483,7 @@ class RearrangeSim(HabitatSim):
 
         # NOTE: allowing indoor islands only
         self._largest_indoor_island_idx = get_largest_island_index(
-            self.pathfinder, self, allow_outdoor=False
+            self.pathfinder, self, allow_outdoor=True
         )
 
     @property

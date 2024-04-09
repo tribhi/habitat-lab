@@ -46,7 +46,7 @@ class PddlSocialNavTask(PddlTask):
         """
         Returns the starting information for a navigate to object task.
         """
-        print("social_nav_task is being called")
+        # print("social_nav_task is being called")
         start_hold_obj_idx: Optional[int] = None
 
         # Only change the scene if this skill is not running as a sub-task
@@ -55,7 +55,7 @@ class PddlSocialNavTask(PddlTask):
             and random.random() < self._object_in_hand_sample_prob
         ):
             start_hold_obj_idx = self._generate_snap_to_obj()
-        print("start_hold_obj_idx: ", start_hold_obj_idx)
+        # print("start_hold_obj_idx: ", start_hold_obj_idx)
         # if start_hold_obj_idx is None:
         #     # Select an object at random and navigate to that object.
         #     all_pos = self._sim.get_target_objs_start()
@@ -105,8 +105,8 @@ class PddlSocialNavTask(PddlTask):
             articulated_agent_pos = np.array(episode.info["human_start"])
             articulated_agent_angle = episode.start_rotation[3]*1.0
             nav_to_pos = np.array(episode.info["human_goal"])
-        print("agent_idx: ", agent_idx,"robot nav_to_pos: ", nav_to_pos)
-        print("Articulated_agent pos & angle: ", articulated_agent_pos, articulated_agent_angle)
+        # print("agent_idx: ", agent_idx,"robot nav_to_pos: ", nav_to_pos)
+        # print("Articulated_agent pos & angle: ", articulated_agent_pos, articulated_agent_angle)
         
         return NavToInfo(
             nav_goal_pos=nav_to_pos, #KL
@@ -133,13 +133,13 @@ class PddlSocialNavTask(PddlTask):
 
     def reset(self, episode: Episode):
         # Process the nav target
-        print("TEST ORIGINAL agent base_pos:")
-        print("robot base_pos: ", self._sim.get_agent_data(0).articulated_agent.base_pos)
-        print("human base_pos: ", self._sim.get_agent_data(1).articulated_agent.base_pos)
+        # print("TEST ORIGINAL agent base_pos:")
+        # print("robot base_pos: ", self._sim.get_agent_data(0).articulated_agent.base_pos)
+        # print("human base_pos: ", self._sim.get_agent_data(1).articulated_agent.base_pos)
         
         for agent_id in range(self._sim.num_articulated_agents):
             #KL
-            print("------------Get Agent ID: ", agent_id, "--------------", self.force_obj_to_idx)
+            # print("------------Get Agent ID: ", agent_id, "--------------", self.force_obj_to_idx)
             self._nav_to_info = self._generate_nav_start_goal(
                     episode, agent_id, force_idx=self.force_obj_to_idx
                 )

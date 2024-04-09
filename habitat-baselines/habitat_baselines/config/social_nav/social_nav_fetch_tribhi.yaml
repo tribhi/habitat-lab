@@ -18,24 +18,24 @@ hydra:
     name: 'social_nav'
 
 habitat_baselines:
-  verbose: False
+  verbose: True
   trainer_name: "ddppo"
   updater_name: "HRLPPO"
   distrib_updater_name: "HRLDDPPO"
   torch_gpu_id: 0
   video_fps: 30
-  eval_ckpt_path_dir: "data/checkpoints/ckpt.6.pth"
+  eval_ckpt_path_dir: "data/checkpoints/latest.pth"
   checkpoint_folder: "data/checkpoints"
-  num_environments: 25  #modified from 18
+  num_environments: 24  #modified from 18
   num_updates: -1
   total_num_steps: 5.0e7
   log_interval: 10
-  num_checkpoints: 100
+  num_checkpoints: 2000
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['pddl_success']
   load_resume_state_config: True
   rollout_storage_name: "HrlRolloutStorage"
-  tensorboard_dir: "tb_fixed_sensor"
+  tensorboard_dir: "tb_longer"
   evaluate: False
 
   eval:

@@ -182,7 +182,6 @@ class RearrangeTask(NavigationTask):
     def _set_articulated_agent_start(self, agent_idx: int,
                                      agent_pos: np.ndarray,
                                      agent_rot: float) -> None:
-        print("being called")
         articulated_agent_start = self._get_cached_articulated_agent_start(
             agent_idx
         )
@@ -234,11 +233,11 @@ class RearrangeTask(NavigationTask):
         #KL
         articulated_agent.base_pos = articulated_agent_pos if agent_pos is None else agent_pos
         articulated_agent.base_rot = agent_rot
-        print("TEST final start base_pos & base_rot: ", articulated_agent.base_pos, articulated_agent.base_rot)
+        # print("TEST final start base_pos & base_rot: ", articulated_agent.base_pos, articulated_agent.base_rot)
 
     @add_perf_timing_func()
     def reset(self, episode: Episode, fetch_observations: bool = True):
-        print("reset being called in rearrange_task")
+        # print("reset being called in rearrange_task")
         self._episode_id = episode.episode_id
         self._ignore_collisions = []
 
@@ -258,7 +257,7 @@ class RearrangeTask(NavigationTask):
                         agent_pos = np.array(episode.info["human_start"])
                         agent_rot = 0
                     self._set_articulated_agent_start(agent_idx, agent_pos, agent_rot)
-        print("TEST articulated_agent_pos_start: ", self._articulated_agent_pos_start)
+        # print("TEST articulated_agent_pos_start: ", self._articulated_agent_pos_start)
 
         self.prev_measures = self.measurements.get_metrics()
         self._targ_idx = 0

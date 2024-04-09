@@ -47,6 +47,7 @@ class HabitatEvaluator(Evaluator):
     ):
         observations = envs.reset()
         observations = envs.post_step(observations)
+        
         batch = batch_obs(observations, device=device)
         batch = apply_obs_transforms_batch(batch, obs_transforms)  # type: ignore
 
@@ -186,6 +187,9 @@ class HabitatEvaluator(Evaluator):
                 infos[i].update(policy_infos[i])
 
             observations = envs.post_step(observations)
+            # print("Testing agent_sensors ")
+            # print("Position of human gps ", observations[0]["agent_0_other_agent_gps"])
+            # print("Agent goal sensor ", observations[0]["agent_0_goal_to_agent_gps_compass"])
             batch = batch_obs(  # type: ignore
                 observations,
                 device=device,

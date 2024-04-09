@@ -585,10 +585,15 @@ def is_outdoor(
     # 1. Sample the navmesh (pathfinder) island (island_ix) until num_samples achieved with with pairwise min_sample_dist or max_sample_attempts.
     num_tries = 0
     nav_samples: List[np.ndarray] = []
+    
     while len(nav_samples) < num_samples and num_tries < max_sample_attempts:
-        nav_sample = pathfinder.get_random_navigable_point(
-            island_index=island_ix
-        )
+        try:
+            nav_sample = pathfinder.get_random_navigable_point(
+                island_index=island_ix
+            )
+        except:
+            print(sim)
+
         if np.any(np.isnan(nav_sample)):
             continue
         if min_sample_dist is not None:
