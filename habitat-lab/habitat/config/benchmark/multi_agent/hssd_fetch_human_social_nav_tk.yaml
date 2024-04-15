@@ -190,8 +190,8 @@ habitat:
       agent_1:
         sim_sensors:
           third_rgb_sensor:
-            height: 64
-            width: 64
+            height: 512
+            width: 512
       #       # uuid: third_rgb
       #       position:
       #         - 9.5
