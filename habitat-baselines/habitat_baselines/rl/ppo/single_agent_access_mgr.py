@@ -207,13 +207,27 @@ class SingleAgentAccessMgr(AgentAccessMgr):
                 self._config.habitat_baselines.rl.ddppo.pretrained_weights,
                 map_location="cpu",
             )
+        # embed()
+        # for key in list(pretrained_state[0]["state_dict"].keys()):
+        #     pretrained_state[0]["state_dict"][key] = pretrained_state[0]["state_dict"][key]
         if self._config.habitat_baselines.rl.ddppo.pretrained:
-            actor_critic.load_state_dict(
-                {  # type: ignore
-                    k[len("actor_critic.") :]: v
-                    for k, v in pretrained_state["state_dict"].items()
-                }
-            )
+            try:
+                actor_critic.load_state_dict(
+                    {  # type: ignore
+                        k: v
+                        for k, v in pretrained_state[0]["state_dict"].items()
+                    }
+                )
+            except:
+                try:
+                    actor_critic.load_state_dict(
+                        {  # type: ignore
+                            k: v
+                            for k, v in pretrained_state[1]["state_dict"].items()
+                        }
+                    )
+                except:
+                    embed()
         elif self._config.habitat_baselines.rl.ddppo.pretrained_encoder:
             prefix = "actor_critic.net.visual_encoder."
             actor_critic.net.visual_encoder.load_state_dict(

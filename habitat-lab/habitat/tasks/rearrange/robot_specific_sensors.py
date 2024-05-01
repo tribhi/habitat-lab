@@ -50,19 +50,18 @@ class SpotHeadStereoDepthSensor(UsesArticulatedAgentInterface, Sensor):
     def get_observation(self, observations, episode, task, *args, **kwargs):
         # Assert Spot's mobile gaze policy input
         require_sensors = ["head_stereo_right_depth", "head_stereo_left_depth"]
+        self.agent_id = 0
         if self.agent_id is None:
             target_key = require_sensors
         else:
             target_key = [
                 f"agent_{self.agent_id}_{key}" for key in require_sensors
             ]
-
         # Handle the case that there are no stereo observations
         agent_do_not_have = False
         for key in target_key:
             if key not in observations:
                 agent_do_not_have = True
-
         if agent_do_not_have:
             warnings.warn(
                 "You are using SpotHeadStereoDepthSensor but you do not provide head_stereo_right_depth and head_stereo_right_depth."

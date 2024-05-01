@@ -93,8 +93,8 @@ DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
 MAP_DIR = "/home/catkin_ws/src/habitat_ros_interface/maps/"
-THIRD_RGB_SIZE = 512
-GRID_SIZE = 4
+THIRD_RGB_SIZE = 128
+GRID_SIZE = 6
 lock = threading.Lock()
 
 def to_grid(pathfinder, points, grid_dimensions):
@@ -164,8 +164,7 @@ class sim_env(threading.Thread):
     
     _current_episode = 0
     _total_number_of_episodes = 0
-    control_frequency = 30
-    time_step = 1.0 / (control_frequency)
+    
     replan_freq = 1
     replan_counter = 0
     def __init__(self, config):
@@ -195,7 +194,12 @@ class sim_env(threading.Thread):
         f.write("origin: [" + str(-1) + "," + str(-self.grid_dimensions[0]*meters_per_pixel+1) + ", 0.000000]\n")
         f.write("negate: 0\noccupied_thresh: 0.65\nfree_thresh: 0.196")
         f.close()
+        
         rospy.init_node("sim", anonymous=False)
+        sim_cfg = config['habitat']['simulator']
+        self.control_frequency = int(np.floor(sim_cfg['ctrl_freq']/sim_cfg['ac_freq_ratio']))
+        time_step = 1.0 / (self.control_frequency)
+        
         self._r = rospy.Rate(self._sensor_rate)
         self._r_control = rospy.Rate(self.control_frequency)
         
@@ -208,13 +212,14 @@ class sim_env(threading.Thread):
         self._pub_goal_marker = rospy.Publisher("~goal", Marker, queue_size = 1)
         self.cloud_pub = rospy.Publisher("top_down_img", PointCloud2, queue_size=2)
         self._pub_img_res = rospy.Publisher("img_res", Float64, queue_size= 1)
+        self._reload_map_server = rospy.Publisher("reload_map_server", Bool, queue_size= 1)
         self.br = tf.TransformBroadcaster()
         self.br_tf_2 = tf2_ros.TransformBroadcaster()
         rospy.Subscriber("/clicked_point", PointStamped,self.point_callback, queue_size=1)
         self.third_camera = self.env.sim.get_agent(0).scene_node.node_sensor_suite.get_sensors()['agent_1_third_rgb']
         self.third_camera.render_camera.projection_matrix = mn.Matrix4([
-            [0.5000000059604645, 0, 0, 0],
-            [0, 0.5000000059604645, 0, 0],
+            [0.3000000059604645, 0, 0, 0],
+            [0, 0.3000000059604645, 0, 0],
             [0, 0, -0.002000020118430257, 0],
             [0, 0, -1.0000200271606445, 1]
         ])
@@ -310,7 +315,45 @@ class sim_env(threading.Thread):
             device=self.device,
             dtype=torch.bool,
         )
+        self._reload_map_server.publish(True)
+        self.start_ep = False
         
+    def reset(self):
+        self.observations = self.env.reset()
+        meters_per_pixel =0.025
+        map_name = "sample_map"
+        hablab_topdown_map = maps.get_topdown_map(
+                self.env._sim.pathfinder, 0.0, meters_per_pixel=meters_per_pixel
+            )
+        recolor_map = np.array(
+            [[255, 255, 255], [128, 128, 128], [0, 0, 0]], dtype=np.uint8
+        )
+        hablab_topdown_map = recolor_map[hablab_topdown_map]
+        floor_y = 0.0
+        self.top_down_map = maps.get_topdown_map(
+            self.env._sim.pathfinder, height=floor_y, meters_per_pixel=0.025
+        )
+        self.grid_dimensions = (self.top_down_map.shape[0], self.top_down_map.shape[1])
+        imageio.imsave(os.path.join(MAP_DIR, map_name + ".pgm"), hablab_topdown_map)
+        print("writing Yaml file! ")
+        complete_name = os.path.join(MAP_DIR, map_name + ".yaml")
+        f = open(complete_name, "w+")
+        f.write("image: " + map_name + ".pgm\n")
+        f.write("resolution: " + str(meters_per_pixel) + "\n")
+        f.write("origin: [" + str(-1) + "," + str(-self.grid_dimensions[0]*meters_per_pixel+1) + ", 0.000000]\n")
+        f.write("negate: 0\noccupied_thresh: 0.65\nfree_thresh: 0.196")
+        f.close()
+        self.map_to_base_link({'x': 0, 'y': 0, 'theta': self.get_object_heading(self.env.sim.agents_mgr[0].articulated_agent.base_transformation)})
+        self._reload_map_server.publish(True)
+        self.start_ep = False
+        self.third_camera = self.env.sim.get_agent(0).scene_node.node_sensor_suite.get_sensors()['agent_1_third_rgb']
+        self.third_camera.render_camera.projection_matrix = mn.Matrix4([
+            [0.3000000059604645, 0, 0, 0],
+            [0, 0.3000000059604645, 0, 0],
+            [0, 0, -0.002000020118430257, 0],
+            [0, 0, -1.0000200271606445, 1]
+        ])
+        rospy.sleep(1)
 
     def img_to_grid(self):
         img = self.observations["agent_1_third_rgb"]
@@ -421,14 +464,20 @@ class sim_env(threading.Thread):
             self._r.sleep()
 
     def update_agent_pos_vel(self):
+        if (self.env._episode_over):
+            print("Done with episode and starting a new one")
+            self.reset()
+            return
+        if not self.start_ep:
+            base_vel = [0.0, 0.0]
+            self.observations.update(self.env.step({"action": 'agent_0_base_velocity', "action_args":{"agent_0_base_vel":base_vel}}))
+            return
         ### When driving agent ####
         lin_vel = self.linear_velocity[2]
         ang_vel = self.angular_velocity[1]
         base_vel = [lin_vel, ang_vel]
         # self.env._episode_over = False
-        if (self.env._episode_over):
-            print("Done with episode")
-            return
+        
         ### When RL drives agent ####
         # base_vel = self.act()
         
@@ -483,7 +532,7 @@ class sim_env(threading.Thread):
         self._pub_door.publish(poseArrayMsg)
         self.door_middle = (door_start_2d+door_end_2d)/2
         door_middle_3d = (np.array(door_start_3d)+np.array(door_end_3d))/2
-        pos = mn.Vector3(door_middle_3d[0], 3.0, door_middle_3d[2])
+        pos = mn.Vector3(door_middle_3d[0], 2.0, door_middle_3d[2])
         ori = mn.Vector3(-1.57,0.,0.)
         Mt = mn.Matrix4.translation(pos)
         Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
@@ -667,9 +716,15 @@ class sim_env(threading.Thread):
         point_map = [msg.point.x, msg.point.y, msg.point.z]
         p = [point_map[0]+1, point_map[1]+1]
         point_3d = from_grid(self.env._sim.pathfinder, [p[0]/0.025, p[1]/0.025], self.grid_dimensions)
-        print("Placing human at ",point_3d)
+        # print("Placing human at ",point_3d)
         k = 'agent_1_oracle_nav_randcoord_action'
-        my_env.env.task.actions[k].coord_nav = np.array([point_3d[0], point_3d[1], point_3d[2]])
+        self.env.task.actions[k].coord_nav = np.array([point_3d[0], point_3d[1], point_3d[2]])
+        self.env._task.my_nav_to_info.human_info.nav_goal_pos = np.array([point_3d[0], point_3d[1], point_3d[2]])
+        print("setting human goal to ",point_3d)
+        self.start_ep = True
+        self.linear_velocity = np.array([0.0,0.0,0.0])
+        self.angular_velocity = np.array([0.0,0.0,0.0])
+        rospy.sleep(3)
         
 
 def callback(vel, my_env):
