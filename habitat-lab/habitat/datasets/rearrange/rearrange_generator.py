@@ -624,7 +624,7 @@ class RearrangeEpisodeGenerator:
         # robot_sampled_start, sampled_start, sampled_goal = self.get_island_sampled_point(
         #     largest_indoor_island_id
         # )
-        sampled_start, sampled_goal, robot_sampled_start, robot_sampled_goal, door1_pos, door2_pos = door_samples(self.sim.pathfinder, self.cfg, ep_scene_handle)
+        sampled_start, sampled_goal, robot_sampled_start, robot_sampled_goal = door_samples(self.sim.pathfinder, self.cfg)
         print("Get DOOR final samples: ", robot_sampled_start, robot_sampled_goal, sampled_start, sampled_goal)
         
         # sample and allocate receptacles to contain the target objects
@@ -960,9 +960,8 @@ class RearrangeEpisodeGenerator:
             info={"object_labels": target_refs, 
                   "human_start": sampled_start, 
                   "human_goal": sampled_goal, 
-                  "robot_goal": robot_sampled_goal, 
-                  "door_start": door1_pos,
-                  "door_end": door2_pos},
+                  "robot_goal": robot_sampled_goal
+                  },
         )
 
     def initialize_sim(self, scene_name: str, dataset_path: str) -> None:

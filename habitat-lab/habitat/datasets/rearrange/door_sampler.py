@@ -164,32 +164,33 @@ def door_samples(pathfinder, config) -> List:
     file_path = f"test_door_dataset/data_{file_name}.csv"
     coords = []
     # Comment out this if producing dataset
-    if os.path.exists(file_path):
-        # os.remove(file_path)
-        with open(file_path, 'r') as csvfile:
-            # Create a CSV reader object
-            csvreader = csv.reader(csvfile)
-            # Convert CSV data to a list of lists
-            data = list(csvreader)
-            total_rows = len(data)
-            row_list = data[0]
-            coords = [[int(row_list[0]), int(row_list[1])], [int(row_list[2]), int(row_list[3])]]
-    else:
-        coords = generate_door_pos()
-        while (not is_door_valid(coords, grid_dim, pathfinder)):
-            coords = generate_door_pos()
-        append_to_csv(file_path, coords[0][0], coords[0][1], coords[1][0], coords[1][1])
+    # if os.path.exists(file_path):
+    #     # os.remove(file_path)
+    #     with open(file_path, 'r') as csvfile:
+    #         # Create a CSV reader object
+    #         csvreader = csv.reader(csvfile)
+    #         # Convert CSV data to a list of lists
+    #         data = list(csvreader)
+    #         total_rows = len(data)
+    #         row_list = data[0]
+    #         coords = [[int(row_list[0]), int(row_list[1])], [int(row_list[2]), int(row_list[3])]]
+    # else:
+    #     coords = generate_door_pos()
+    #     while (not is_door_valid(coords, grid_dim, pathfinder)):
+    #         coords = generate_door_pos()
+    #     append_to_csv(file_path, coords[0][0], coords[0][1], coords[1][0], coords[1][1])
     ####till here
     
-    
-    # # append valid door pos to csv file
-    # # if os.path.exists(file_path):
-    # #     os.remove(file_path)
-    # #make sure only 1 door in each dataset
-    # coords = generate_door_pos()
-    # while (not is_door_valid(coords, grid_dim, pathfinder)):
-    #     coords = generate_door_pos()
-    # append_to_csv(file_path, coords[0][0], coords[0][1], coords[1][0], coords[1][1])
+    # Comment out this if producing dataset
+    # append valid door pos to csv file
+    if os.path.exists(file_path):
+        os.remove(file_path)
+    #make sure only 1 door in each dataset
+    coords = generate_door_pos()
+    while (not is_door_valid(coords, grid_dim, pathfinder)):
+        coords = generate_door_pos()
+    append_to_csv(file_path, coords[0][0], coords[0][1], coords[1][0], coords[1][1])
+    ###till here
 
     # Get door pos randomly from csv file
     # coords = []
