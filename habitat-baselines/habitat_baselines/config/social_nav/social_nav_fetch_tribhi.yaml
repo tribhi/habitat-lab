@@ -33,7 +33,7 @@ habitat_baselines:
   num_checkpoints: 2000
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['pddl_success']
-  load_resume_state_config: False
+  load_resume_state_config: True
   rollout_storage_name: "HrlRolloutStorage"
   tensorboard_dir: "tb_with_top_down"
   evaluate: False
