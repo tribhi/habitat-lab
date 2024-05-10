@@ -196,26 +196,44 @@ class KinematicHumanoid(MobileManipulator):
                         ).transformation
 
                     if cam_info.attached_link_id != -3:
-                        if cam_info.cam_look_at_pos == mn.Vector3(0, 0, 0):
-                            pos = cam_info.cam_offset_pos
-                            ori = cam_info.cam_orientation
-                            Mt = mn.Matrix4.translation(pos)
-                            Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
-                            My = mn.Matrix4.rotation_y(mn.Rad(ori[1]))
-                            Mx = mn.Matrix4.rotation_x(mn.Rad(ori[0]))
-                            cam_transform = Mt @ Mz @ My @ Mx
-                        else:
-                            cam_transform = mn.Matrix4.look_at(
-                                cam_info.cam_offset_pos,
-                                cam_info.cam_look_at_pos,
-                                mn.Vector3(0, 1, 0),
-                            )
-                        cam_transform = (
-                            link_trans
-                            @ cam_transform
-                            @ cam_info.relative_transform
-                        )
+                        door_start = self._sim.ep_info.info['door_start']
+                        door_end = self._sim.ep_info.info['door_end']
+                        door_middle_3d = (np.array(door_start)+np.array(door_end))/2
+                        pos = mn.Vector3(door_middle_3d[0], 2.0, door_middle_3d[2])
+                        ori = mn.Vector3(-1.57,0.,0.)
+                        Mt = mn.Matrix4.translation(pos)
+                        Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
+                        My = mn.Matrix4.rotation_y(mn.Rad(ori[1]))
+                        Mx = mn.Matrix4.rotation_x(mn.Rad(ori[0]))
+                        cam_transform = Mt @ Mz @ My @ Mx
                         cam_transform = inv_T @ cam_transform
+                        
+                        sens_obj.render_camera.projection_matrix = mn.Matrix4([
+                            [0.3000000059604645, 0, 0, 0],
+                            [0, 0.3000000059604645, 0, 0],
+                            [0, 0, -0.002000020118430257, 0],
+                            [0, 0, -1.0000200271606445, 1]
+                        ])
+                        # if cam_info.cam_look_at_pos == mn.Vector3(0, 0, 0):
+                        #     pos = cam_info.cam_offset_pos
+                        #     ori = cam_info.cam_orientation
+                        #     Mt = mn.Matrix4.translation(pos)
+                        #     Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
+                        #     My = mn.Matrix4.rotation_y(mn.Rad(ori[1]))
+                        #     Mx = mn.Matrix4.rotation_x(mn.Rad(ori[0]))
+                        #     cam_transform = Mt @ Mz @ My @ Mx
+                        # else:
+                        #     cam_transform = mn.Matrix4.look_at(
+                        #         cam_info.cam_offset_pos,
+                        #         cam_info.cam_look_at_pos,
+                        #         mn.Vector3(0, 1, 0),
+                        #     )
+                        # cam_transform = (
+                        #     link_trans
+                        #     @ cam_transform
+                        #     @ cam_info.relative_transform
+                        # )
+                        # cam_transform = inv_T @ cam_transform
 
                         sens_obj.node.transformation = (
                             orthonormalize_rotation_shear(cam_transform)

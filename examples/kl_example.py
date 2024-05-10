@@ -129,7 +129,7 @@ class sim_env(threading.Thread):
         base_vel = [lin_vel, ang_vel]
         self.env._episode_over = False
         k = 'agent_1_oracle_nav_randcoord_action'
-        my_env.env.task.actions[k].coord_nav = self.observations['agent_0_localization_sensor'][:3]
+        my_env.env.task.actions[k].bservations['agent_0_localization_sensor'][:3]
         self.env.task.actions[k].step()
         self.observations.update(self.env.step({"action": 'agent_0_base_velocity', "action_args":{"agent_0_base_vel":base_vel}}))
         

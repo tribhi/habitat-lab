@@ -15,7 +15,7 @@ defaults:
   - /habitat/task/actions@habitat.task.actions.agent_1_base_velocity: base_velocity
   - /habitat/task/actions@habitat.task.actions.agent_1_rearrange_stop: rearrange_stop
   - /habitat/task/actions@habitat.task.actions.agent_1_pddl_apply_action: pddl_apply_action
-  - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_action: oracle_nav_action
+  # - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_action: oracle_nav_action
   - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_randcoord_action: oracle_nav_action
   # Config agent sensor
   - /habitat/task/measurements:
@@ -66,7 +66,7 @@ habitat:
         y_len: 1.5
         agent_idx: 1
       agent_0_goal_to_agent_gps_compass:
-        goal_is_human: True
+        goal_is_human: False
       # Defien the human detector
       humanoid_detector_sensor:
         # If the human detector function is image or binary flag
@@ -121,13 +121,13 @@ habitat:
         enable_rotation_check_for_dyn_slide: False
 
       # Human random walking action
-      agent_1_oracle_nav_action:
-        type: OracleNavAction
-        motion_control: human_joints
-        spawn_max_dist_to_obj: -1.0
-        dist_thresh: 0.5
-        lin_speed: 10.0
-        ang_speed: 10.0
+      # agent_1_oracle_nav_action:
+      #   type: OracleNavAction
+      #   motion_control: human_joints
+      #   spawn_max_dist_to_obj: -1.0
+      #   dist_thresh: 0.5
+      #   lin_speed: 10.0
+      #   ang_speed: 10.0
 
       agent_1_oracle_nav_randcoord_action:
         type: OracleNavRandCoordAction
@@ -179,4 +179,4 @@ habitat:
       allow_sliding: True
       enable_physics: True
   dataset:
-    data_path: /habitat-lab/data/versioned_data/hab3-episodes/train/social_rearrange.json.gz
+    data_path: /habitat-lab/data/social_nav_episode_0415_570.json.gz

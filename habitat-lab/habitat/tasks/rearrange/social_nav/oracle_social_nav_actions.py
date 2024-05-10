@@ -335,7 +335,7 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
         # #KL: test human agent pos
         # robot_pos = self._sim.get_agent_data(0).articulated_agent.base_pos
         # human_pos = self._sim.get_agent_data(1).articulated_agent.base_pos
-        # print("TEST in step: ", robot_pos, human_pos)
+        # print("TEST in step: ", human_pos)
         # print("-------TEST in step for COORD_NAV:", self.coord_nav, "is called--------")
 
 

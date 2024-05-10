@@ -189,7 +189,9 @@ class SocialNavReward(RearrangeReward):
         goal = task.my_nav_to_info.robot_info.nav_goal_pos
 
         dist_to_goal = np.linalg.norm(np.array(robot_pos)[[0, 2]]- goal[[0, 2]])
-        social_nav_reward += self.interm_goal_bonus * (self._prev_dist_to_goal - dist_to_goal)
+        # if dist_to_goal<  self._config.success_distance:
+        #     task.should_end = True
+        # social_nav_reward += self.interm_goal_bonus * (self._prev_dist_to_goal - dist_to_goal)
 
         self._metric += social_nav_reward
         # Update the distance
@@ -636,6 +638,8 @@ class SocialNavToPosSucc(Measure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         dist = task.measurements.measures[SocialDistToGoal.cls_uuid].get_metric()
         self._metric = dist < self._config.success_distance
+        if self._metric:
+            task.should_end = True
         # print("social navtopos distance is ", dist)
 
 

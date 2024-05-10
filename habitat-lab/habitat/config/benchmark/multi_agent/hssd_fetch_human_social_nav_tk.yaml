@@ -140,7 +140,7 @@ habitat:
       # added obs_keys
       - agent_0_localization_sensor
       - agent_0_other_agent_gps
-      
+      - agent_1_third_rgb_sensor
       - agent_1_head_depth
       - agent_1_relative_resting_position
       - agent_1_obj_start_sensor
@@ -190,8 +190,8 @@ habitat:
       agent_1:
         sim_sensors:
           third_rgb_sensor:
-            height: 64
-            width: 64
+            height: 128
+            width: 128
       #       # uuid: third_rgb
       #       position:
       #         - 9.5
@@ -213,6 +213,6 @@ habitat:
       enable_physics: True
   dataset:
     # data_path: data/datasets/hssd/rearrange/{split}/social_rearrange.json.gz
-    data_path: /habitat-lab/data/social_nav_episode_7_15.json.gz
+    data_path: /habitat-lab/data/social_nav_episode_0415_samples.json.gz
     # data_path: data/social_nav_episode_mp3d.json.gz
     # data_path: /habitat-lab/data/versioned_data/hab3_episodes/{split}/social_rearrange.json.gz
