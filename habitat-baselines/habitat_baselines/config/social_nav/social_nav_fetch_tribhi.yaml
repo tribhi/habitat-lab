@@ -24,8 +24,8 @@ habitat_baselines:
   distrib_updater_name: "HRLDDPPO"
   torch_gpu_id: 0
   video_fps: 30
-  eval_ckpt_path_dir: "data/checkpoints/latest.pth"
-  checkpoint_folder: "data/checkpoints"
+  eval_ckpt_path_dir: "data/checkpoints_1/latest.pth"
+  checkpoint_folder: "data/checkpoints_1"
   num_environments: 24  #modified from 18
   num_updates: -1
   total_num_steps: 5.0e9
@@ -33,7 +33,7 @@ habitat_baselines:
   num_checkpoints: 2000
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['pddl_success']
-  load_resume_state_config: True
+  load_resume_state_config: False
   rollout_storage_name: "HrlRolloutStorage"
   tensorboard_dir: "tb_with_top_down"
   evaluate: False

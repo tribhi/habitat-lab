@@ -195,7 +195,7 @@ class KinematicHumanoid(MobileManipulator):
                             cam_info.attached_link_id
                         ).transformation
 
-                    if cam_info.attached_link_id != -3:
+                    if cam_info.attached_link_id == -3:
                         door_start = self._sim.ep_info.info['door_start']
                         door_end = self._sim.ep_info.info['door_end']
                         door_middle_3d = (np.array(door_start)+np.array(door_end))/2
@@ -239,17 +239,30 @@ class KinematicHumanoid(MobileManipulator):
                             orthonormalize_rotation_shear(cam_transform)
                         )
                     else:
-                        # pos = cam_info.cam_offset_pos
-                        # ori = cam_info.cam_orientation
-                        # Mt = mn.Matrix4.translation(pos)
-                        # Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
-                        # My = mn.Matrix4.rotation_y(mn.Rad(ori[1]))
-                        # Mx = mn.Matrix4.rotation_x(mn.Rad(ori[0]))
-                        # cam_transform = Mt @ Mz @ My @ Mx
-                        # sens_obj.node.transformation = (
-                        #     cam_transform
-                        # )
-                        pass
+                        if cam_info.cam_look_at_pos == mn.Vector3(0, 0, 0):
+                            pos = cam_info.cam_offset_pos
+                            ori = cam_info.cam_orientation
+                            Mt = mn.Matrix4.translation(pos)
+                            Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
+                            My = mn.Matrix4.rotation_y(mn.Rad(ori[1]))
+                            Mx = mn.Matrix4.rotation_x(mn.Rad(ori[0]))
+                            cam_transform = Mt @ Mz @ My @ Mx
+                        else:
+                            cam_transform = mn.Matrix4.look_at(
+                                cam_info.cam_offset_pos,
+                                cam_info.cam_look_at_pos,
+                                mn.Vector3(0, 1, 0),
+                            )
+                        cam_transform = (
+                            link_trans
+                            @ cam_transform
+                            @ cam_info.relative_transform
+                        )
+                        cam_transform = inv_T @ cam_transform
+
+                        sens_obj.node.transformation = (
+                            orthonormalize_rotation_shear(cam_transform)
+                        )
                     # print("Transform for ", sensor_name, " is ", sens_obj.node.transformation)
         if self._fix_joint_values is not None:
             self.arm_joint_pos = self._fix_joint_values

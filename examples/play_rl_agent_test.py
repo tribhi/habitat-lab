@@ -547,7 +547,7 @@ class sim_env(threading.Thread):
             orthonormalize_rotation_shear(cam_transform)
         )
         # self.third_camera.render_camera.node.transformation = camera.node.transformation
-        
+
         # self.proj = np.linalg.inv(np.array(self.third_camera.render_camera.projection_matrix))
         # self.cam = np.linalg.inv(np.array(cam_transform))
         self.proj = (np.array(self.third_camera.render_camera.projection_matrix))
