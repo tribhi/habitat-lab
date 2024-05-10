@@ -2,10 +2,10 @@
 #SBATCH --job-name=ddppo
 #SBATCH --output=logs.ddppo.out
 #SBATCH --error=logs.ddppo.err
-#SBATCH --gpus 1
+#SBATCH --gpus 2
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 10
-#SBATCH --ntasks-per-node 1
+#SBATCH --ntasks-per-node 2
 #SBATCH --mem=60GB
 #SBATCH --time=72:00:00
 #SBATCH --signal=USR1@90
@@ -23,5 +23,6 @@ MAIN_ADDR=$(scontrol show hostnames "${SLURM_JOB_NODELIST}" | head -n 1)
 export MAIN_ADDR
 
 set -x
-srun python -u -m habitat_baselines.run \
-    --config-name=pointnav/ddppo_pointnav.yaml
+srun python habitat-baselines/habitat_baselines/run.py \
+    --config-name=social_nav/social_nav_fetch_tribhi.yaml habitat_baselines.evaluate=False \
+    habitat_baselines/checkpoint_folder=data/checkpoints_gpu2

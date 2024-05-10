@@ -109,3 +109,5 @@ navmeshes/
 /plots/outputs
 /wandb/
  up
+
+cluster/
