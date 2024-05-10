@@ -191,7 +191,7 @@ class SocialNavReward(RearrangeReward):
         dist_to_goal = np.linalg.norm(np.array(robot_pos)[[0, 2]]- goal[[0, 2]])
         # if dist_to_goal<  self._config.success_distance:
         #     task.should_end = True
-        social_nav_reward += self.interm_goal_bonus * (self._prev_dist_to_goal - dist_to_goal)
+        # social_nav_reward += self.interm_goal_bonus * (self._prev_dist_to_goal - dist_to_goal)
 
         self._metric += social_nav_reward
         # Update the distance

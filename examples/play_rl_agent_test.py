@@ -347,12 +347,12 @@ class sim_env(threading.Thread):
         self._reload_map_server.publish(True)
         self.start_ep = False
         self.third_camera = self.env.sim.get_agent(0).scene_node.node_sensor_suite.get_sensors()['agent_1_third_rgb']
-        self.third_camera.render_camera.projection_matrix = mn.Matrix4([
-            [0.3000000059604645, 0, 0, 0],
-            [0, 0.3000000059604645, 0, 0],
-            [0, 0, -0.002000020118430257, 0],
-            [0, 0, -1.0000200271606445, 1]
-        ])
+        # self.third_camera.render_camera.projection_matrix = mn.Matrix4([
+        #     [0.3000000059604645, 0, 0, 0],
+        #     [0, 0.3000000059604645, 0, 0],
+        #     [0, 0, -0.002000020118430257, 0],
+        #     [0, 0, -1.0000200271606445, 1]
+        # ])
         rospy.sleep(1)
 
     def img_to_grid(self):
@@ -546,7 +546,8 @@ class sim_env(threading.Thread):
         camera.node.transformation = (
             orthonormalize_rotation_shear(cam_transform)
         )
-        self.third_camera.render_camera.node.transformation = camera.node.transformation
+        # self.third_camera.render_camera.node.transformation = camera.node.transformation
+        
         # self.proj = np.linalg.inv(np.array(self.third_camera.render_camera.projection_matrix))
         # self.cam = np.linalg.inv(np.array(cam_transform))
         self.proj = (np.array(self.third_camera.render_camera.projection_matrix))
@@ -718,13 +719,15 @@ class sim_env(threading.Thread):
         point_3d = from_grid(self.env._sim.pathfinder, [p[0]/0.025, p[1]/0.025], self.grid_dimensions)
         # print("Placing human at ",point_3d)
         k = 'agent_1_oracle_nav_randcoord_action'
-        self.env.task.actions[k].coord_nav = np.array([point_3d[0], point_3d[1], point_3d[2]])
-        self.env._task.my_nav_to_info.human_info.nav_goal_pos = np.array([point_3d[0], point_3d[1], point_3d[2]])
-        print("setting human goal to ",point_3d)
+        chance = np.random.randn(1)
+        if chance>0.5:
+            self.env.task.actions[k].coord_nav = np.array([point_3d[0], point_3d[1], point_3d[2]])
+            self.env._task.my_nav_to_info.human_info.nav_goal_pos = np.array([point_3d[0], point_3d[1], point_3d[2]])
+            print("setting human goal to ",point_3d)
         self.start_ep = True
         self.linear_velocity = np.array([0.0,0.0,0.0])
         self.angular_velocity = np.array([0.0,0.0,0.0])
-        rospy.sleep(3)
+        rospy.sleep(10)
         
 
 def callback(vel, my_env):

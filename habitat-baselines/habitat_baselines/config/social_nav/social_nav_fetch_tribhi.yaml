@@ -28,14 +28,14 @@ habitat_baselines:
   checkpoint_folder: "data/checkpoints"
   num_environments: 24  #modified from 18
   num_updates: -1
-  total_num_steps: 5.0e7
+  total_num_steps: 5.0e9
   log_interval: 10
   num_checkpoints: 2000
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['pddl_success']
   load_resume_state_config: True
   rollout_storage_name: "HrlRolloutStorage"
-  tensorboard_dir: "tb_longer"
+  tensorboard_dir: "tb_with_top_down"
   evaluate: False
 
   eval:
@@ -109,9 +109,9 @@ habitat_baselines:
       # The PyTorch distributed backend to use
       distrib_backend: NCCL
       # Visual encoder backbone
-      pretrained_weights: data/new_checkpoints/latest.pth
+      pretrained_weights: data/sunny_checkpoint/ckpt.1441.pth
       # Initialize with pretrained weights
-      pretrained: False
+      pretrained: True
       # Initialize just the visual encoder backbone with pretrained weights
       pretrained_encoder: False
       # Whether the visual encoder backbone will be trained.

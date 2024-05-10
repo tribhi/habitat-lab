@@ -97,10 +97,10 @@ class PddlSocialNavTask(PddlTask):
             # nav_to_pos = np.array(episode.info["human_start"])
             # change to somewhere navigable
             nav_to_pos = self._sim.pathfinder.get_random_navigable_point_near(
-            circle_center=np.array(episode.info["human_start"]),
+            circle_center=np.array(episode.info["robot_goal"]),
             radius=2
             )
-            nav_to_pos = np.array(episode.info["human_start"])
+            nav_to_pos = np.array(episode.info["robot_goal"])
         elif agent_idx == 1: #human
             articulated_agent_pos = np.array(episode.info["human_start"])
             articulated_agent_angle = episode.start_rotation[3]*1.0

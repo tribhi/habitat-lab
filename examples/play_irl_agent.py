@@ -213,7 +213,7 @@ class sim_env(threading.Thread):
         self.cloud_pub = rospy.Publisher("top_down_img", PointCloud2, queue_size=2)
         self._pub_img_res = rospy.Publisher("img_res", Float64, queue_size= 1)
         self._reload_map_server = rospy.Publisher("reload_map_server", Bool, queue_size= 1)
-        self.sub_traj = rospy.Subscriber("irl_traj", Int32MultiArray, self.get_irl_traj, queue_size = 1)
+        # self.sub_traj = rospy.Subscriber("irl_traj", Int32MultiArray, self.get_irl_traj, queue_size = 1)
         self.br = tf.TransformBroadcaster()
         self.br_tf_2 = tf2_ros.TransformBroadcaster()
         rospy.Subscriber("/clicked_point", PointStamped,self.point_callback, queue_size=1)
@@ -480,9 +480,9 @@ class sim_env(threading.Thread):
         k = 'agent_1_oracle_nav_randcoord_action'
         # my_env.env.task.actions[k].coord_nav = self.observations['agent_0_localization_sensor'][:3]
         self.env.task.actions[k].step()
-        k = 'agent_0_oracle_nav_randcoord_action'
-        my_env.env.task.actions[k].coord_nav = 0 ### Read the point from the traj
-        self.env.task.actions[k].step()
+        # k = 'agent_0_oracle_nav_randcoord_action'
+        # self.env.task.actions[k].coord_nav = 0 ### Read the point from the traj
+        # self.env.task.actions[k].step()
         self.observations.update(self.env.step({"action": 'agent_0_base_velocity', "action_args":{"agent_0_base_vel":base_vel}}))
         if self.replan_counter % int(self.control_frequency/self.replan_freq):
             # self.img_to_grid()
