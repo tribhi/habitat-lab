@@ -79,18 +79,22 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
             self._action_arg_prefix + "oracle_nav_coord_action",
             self._action_arg_prefix + "oracle_nav_human_action",
         )
+        # print("kwargs  here are ", kwargs)
         if np.linalg.norm(nav_to_target_coord) == 0:
             return {}
         final_nav_targ, obj_targ_pos = self._get_target_for_coord( #debug
             nav_to_target_coord
         )
-        final_nav_targ = self._task.my_nav_to_info.human_info.nav_goal_pos #kl
-        obj_targ_pos  = self._task.my_nav_to_info.human_info.nav_goal_pos
+        if self.motion_type == "human_joints":
+            final_nav_targ = self._task.my_nav_to_info.human_info.nav_goal_pos #kl
+            obj_targ_pos  = self._task.my_nav_to_info.human_info.nav_goal_pos
+        else:
+            final_nav_targ = nav_to_target_coord
+            # print("final nav target here is", final_nav_targ)
         #KL: generate humanoidpath from here
         base_T = self.cur_articulated_agent.base_transformation
         curr_path_points = self._path_to_point(final_nav_targ)
         robot_pos = np.array(self.cur_articulated_agent.base_pos)
-
         if curr_path_points is None:
             raise Exception
         else:
@@ -98,6 +102,7 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
             if len(curr_path_points) == 1:
                 curr_path_points += curr_path_points
             cur_nav_targ = curr_path_points[1]
+            
             forward = np.array([1.0, 0, 0])
             robot_forward = np.array(base_T.transform_vector(forward))
 
@@ -115,11 +120,14 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
             dist_to_final_nav_targ = np.linalg.norm(
                 (final_nav_targ - robot_pos)[[0, 2]]
             )
+            
             at_goal = (
                 dist_to_final_nav_targ < self._config.dist_thresh
                 and angle_to_obj < self._config.turn_thresh
             ) or dist_to_final_nav_targ < self._config.dist_thresh / 10.0
             if self.motion_type == "base_velocity":
+                # print("Current nav path is ", curr_path_points)
+                print("Robot pose and current nav target is ", robot_pos, final_nav_targ)
                 if not at_goal:
                     if self.nav_mode == "avoid":
                         backward = np.array([-1.0, 0, 0])
@@ -163,6 +171,7 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
                     vel = [0, 0]
                     self.skill_done = True
                 kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
+                # print("Got base_velocity here" , vel)
                 return BaseVelAction.step(self, *args, **kwargs)
 
             elif self.motion_type == "human_joints":
@@ -390,17 +399,18 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
         speed = np.random.uniform(
             self._config.lin_speed / 5.0, self._config.lin_speed
         )
-        lin_speed = speed
-        ang_speed = speed
-        self.humanoid_controller.set_framerate_for_linspeed(
-            lin_speed, ang_speed, self._sim.ctrl_freq
-        )
+        if self.motion_type == "human_joints":
+            lin_speed = speed
+            ang_speed = speed
+            self.humanoid_controller.set_framerate_for_linspeed(
+                lin_speed, ang_speed, self._sim.ctrl_freq
+            )
 
-        try:
-            kwargs["task"].measurements.measures[
-                "social_nav_stats"
-            ].update_human_pos = self.coord_nav
+            try:
+                kwargs["task"].measurements.measures[
+                    "social_nav_stats"
+                ].update_human_pos = self.coord_nav
 
-        except Exception:
-            pass
+            except Exception:
+                pass
         return ret_val

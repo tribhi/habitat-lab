@@ -205,7 +205,7 @@ habitat:
         
 
     kinematic_mode: True
-    ac_freq_ratio: 4 # Tried 1 before 
+    ac_freq_ratio: 1 # Tried 1 before 
     step_physics: False
 
     habitat_sim_v0:

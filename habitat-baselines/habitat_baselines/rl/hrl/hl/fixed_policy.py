@@ -10,7 +10,7 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import parse_func
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.hl.high_level_policy import HighLevelPolicy
 from habitat_baselines.rl.ppo.policy import PolicyActionData
-
+from IPython import embed
 
 class FixedHighLevelPolicy(HighLevelPolicy):
     """
@@ -29,7 +29,6 @@ class FixedHighLevelPolicy(HighLevelPolicy):
         self._update_solution_actions(
             [self._parse_solution_actions() for _ in range(self._num_envs)]
         )
-
         self._next_sol_idxs = torch.zeros(self._num_envs, dtype=torch.int32)
 
     def _update_solution_actions(

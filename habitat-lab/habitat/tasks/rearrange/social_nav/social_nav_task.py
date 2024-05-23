@@ -50,11 +50,11 @@ class PddlSocialNavTask(PddlTask):
         start_hold_obj_idx: Optional[int] = None
 
         # Only change the scene if this skill is not running as a sub-task
-        if (
-            force_idx is None
-            and random.random() < self._object_in_hand_sample_prob
-        ):
-            start_hold_obj_idx = self._generate_snap_to_obj()
+        # if (
+        #     force_idx is None
+        #     and random.random() < self._object_in_hand_sample_prob
+        # ):
+            # start_hold_obj_idx = self._generate_snap_to_obj()
         # print("start_hold_obj_idx: ", start_hold_obj_idx)
         # if start_hold_obj_idx is None:
         #     # Select an object at random and navigate to that object.
@@ -181,5 +181,6 @@ class PddlSocialNavTask(PddlTask):
             target_agent = self._sim.get_agent_data(agent_id).articulated_agent
             if not isinstance(target_agent, KinematicHumanoid):
                 self.initial_robot_trans = target_agent.base_transformation
+        self._sim.get_agent(0).scene_node.node_sensor_suite.get_sensors()['agent_0_third_rgb'] = self._sim.get_agent(0).scene_node.node_sensor_suite.get_sensors()['agent_1_third_rgb']
 
         return self._get_observations(episode)

@@ -411,7 +411,7 @@ class sim_env(threading.Thread):
             #  Make masks not done till reset (end of episode) will be called
             self.not_done_masks.fill_(True)
             self.prev_actions.copy_(action_data.actions)  # type: ignore
-        return [action_data.env_actions[0][0].item(), action_data.env_actions[0][1].item()]
+        return action_data
     
     def run(self):
         """Publish sensor readings through ROS on a different thread.
@@ -464,6 +464,7 @@ class sim_env(threading.Thread):
             self._r.sleep()
 
     def update_agent_pos_vel(self):
+        
         if (self.env._episode_over):
             print("Done with episode and starting a new one")
             self.reset()
@@ -479,11 +480,13 @@ class sim_env(threading.Thread):
         # self.env._episode_over = False
         
         ### When RL drives agent ####
-        # base_vel = self.act()
-        
+        # action_data = self.act()
+        # base_vel = [action_data.env_actions[0][0].item(), action_data.env_actions[0][1].item()]
+       
         k = 'agent_1_oracle_nav_randcoord_action'
         # my_env.env.task.actions[k].coord_nav = self.observations['agent_0_localization_sensor'][:3]
         self.env.task.actions[k].step()
+        
         self.observations.update(self.env.step({"action": 'agent_0_base_velocity', "action_args":{"agent_0_base_vel":base_vel}}))
         if self.replan_counter % int(self.control_frequency/self.replan_freq):
             # self.img_to_grid()

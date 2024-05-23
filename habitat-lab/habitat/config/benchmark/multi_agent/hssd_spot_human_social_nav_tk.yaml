@@ -191,7 +191,7 @@ habitat:
         joint_start_noise: 0.0
     # We use the kinematic mode to train the real world social nav policy
     kinematic_mode: True
-    ac_freq_ratio: 4
+    ac_freq_ratio: 1
     step_physics: False
 
     habitat_sim_v0:

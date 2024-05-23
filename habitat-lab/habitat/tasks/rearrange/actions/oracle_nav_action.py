@@ -35,6 +35,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         self.motion_type = config.motion_control
         if self.motion_type == "base_velocity":
             BaseVelAction.__init__(self, *args, **kwargs)
+            print("Being called?")
 
         elif self.motion_type == "human_joints":
             HumanoidJointAction.__init__(self, *args, **kwargs)

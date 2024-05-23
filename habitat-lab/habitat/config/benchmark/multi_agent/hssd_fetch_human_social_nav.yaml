@@ -4,7 +4,7 @@ defaults:
   - /habitat: habitat_config_base
   - /habitat/task: task_config_base
   # Config agent sensors
-  - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_0: depth_head_agent
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_0: rgbd_third_head_agent
   - /habitat/simulator/agents@habitat.simulator.agents.agent_0: fetch
   - /habitat/simulator/sensor_setups@habitat.simulator.agents.agent_1: rgbd_third_head_agent
   - /habitat/simulator/agents@habitat.simulator.agents.agent_1: human
@@ -82,13 +82,13 @@ habitat:
     constraint_violation_drops_object: True
 
     measurements:
-      rearrange_cooperate_reward:
-        stage_sparse_reward: 5.0
-        end_on_collide: False
-        collide_penalty: 0.5
-      force_terminate:
-        max_accum_force: -1
-        max_instant_force: -1
+      # rearrange_cooperate_reward:
+      #   stage_sparse_reward: 5.0
+      #   end_on_collide: False
+      #   collide_penalty: 0.5
+      # force_terminate:
+      #   max_accum_force: -1
+      #   max_instant_force: -1
       social_nav_reward:
         count_coll_pen: 0.01  # Tried 0.25 before slow 
         max_count_colls: -1 # Tried 1000 before 
@@ -138,6 +138,7 @@ habitat:
       - agent_0_head_depth
       - agent_0_goal_to_agent_gps_compass
       - agent_0_humanoid_detector_sensor
+      - agent_0_third_rgb
       # added obs_keys
       - agent_0_localization_sensor
       - agent_0_other_agent_gps
@@ -206,7 +207,7 @@ habitat:
         
 
     kinematic_mode: True
-    ac_freq_ratio: 4 # Tried 1 before 
+    ac_freq_ratio: 1 # Tried 1 before 
     step_physics: False
 
     habitat_sim_v0:
