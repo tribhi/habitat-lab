@@ -38,7 +38,6 @@ class PddlTask(RearrangeTask):
 
     def reset(self, episode: Episode):
         super().reset(episode, fetch_observations=False)
-        # embed()
         self.pddl_problem.bind_to_instance(
             self._sim, cast(RearrangeDatasetV0, self._dataset), self, episode
         )

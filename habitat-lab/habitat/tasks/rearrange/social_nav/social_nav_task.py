@@ -93,17 +93,17 @@ class PddlSocialNavTask(PddlTask):
         # set robot pose to robot start position
         if agent_idx == 0: #robot
             articulated_agent_pos = np.array(episode.start_position)
-            articulated_agent_angle = episode.start_rotation[3]*1.0
+            articulated_agent_angle = episode.start_rotation[2]
             # nav_to_pos = np.array(episode.info["human_start"])
             # change to somewhere navigable
-            nav_to_pos = self._sim.pathfinder.get_random_navigable_point_near(
-            circle_center=np.array(episode.info["robot_goal"]),
-            radius=2
-            )
+            # nav_to_pos = self._sim.pathfinder.get_random_navigable_point_near(
+            # circle_center=np.array(episode.info["robot_goal"]),
+            # radius=2
+            # )
             nav_to_pos = np.array(episode.info["robot_goal"])
         elif agent_idx == 1: #human
             articulated_agent_pos = np.array(episode.info["human_start"])
-            articulated_agent_angle = episode.start_rotation[3]*1.0
+            articulated_agent_angle = episode.info["human_rot"][2]
             nav_to_pos = np.array(episode.info["human_goal"])
         # print("agent_idx: ", agent_idx,"robot nav_to_pos: ", nav_to_pos)
         # print("Articulated_agent pos & angle: ", articulated_agent_pos, articulated_agent_angle)
@@ -139,10 +139,11 @@ class PddlSocialNavTask(PddlTask):
         
         for agent_id in range(self._sim.num_articulated_agents):
             #KL
-            # print("------------Get Agent ID: ", agent_id, "--------------", self.force_obj_to_idx)
+            
             self._nav_to_info = self._generate_nav_start_goal(
                     episode, agent_id, force_idx=self.force_obj_to_idx
                 )
+            print("------------Get Agent ID: ", agent_id, "--------------", self._nav_to_info)
             if (agent_id == 0):
                 robot_info = self._nav_to_info
             else:
@@ -159,6 +160,7 @@ class PddlSocialNavTask(PddlTask):
             ).articulated_agent.base_rot = (
                 self._nav_to_info.articulated_agent_start_angle
             )
+        print("Episode is ", episode.episode_id)
         self.my_nav_to_info = MyNavToInfo(robot_info, human_info)
         super().reset(episode)
         

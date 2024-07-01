@@ -39,6 +39,8 @@ from habitat.utils.visualizations.utils import (
     observations_to_image,
     overlay_frame,
 )
+from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
+
 from habitat_sim.utils import viz_utils as vut
 from habitat.utils.visualizations.utils import images_to_video
 # sys.path.append("/root/miniconda3/envs/robostackenv/lib/python3.9/site-packages")
@@ -65,7 +67,10 @@ from collections import OrderedDict
 import imageio
 import struct
 from nav_msgs.msg import Path
-
+import gzip
+import csv
+from tf.transformations import euler_from_quaternion
+import copy
 from habitat.core.simulator import Observations
 
 from habitat_baselines.rl.ddppo.policy import (  # noqa: F401.
@@ -87,19 +92,22 @@ from habitat_baselines.utils.common import (
     is_continuous_action_space,
 )
 from habitat_baselines.agents.simple_agents import GoalFollower
-import csv
+import json
 from IPython import embed
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = "data/humanoids/humanoid_data/walking_motion_processed.pkl"
 DEFAULT_CFG = "benchmark/rearrange/play/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
-SAVE_VIDEO_DIR = "/habitat-lab/data/vids/Run_1_Jun_28"
+SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
 MAP_DIR = "/home/catkin_ws/src/habitat_ros_interface/maps/"
 THIRD_RGB_SIZE = 128
 GRID_SIZE = 6
 HUMAN_HEAD_START = 0       #60
-CSV_PATH = "/habitat-lab/data/vids/Run_1_Jun_28/results.csv"
+DATASET_PATH = "/habitat-lab/data/social_nav_episode_0415_samples.json"
+PREV_OUTPUT_DATSET_PATH = "/habitat-lab/data/custom_data_run0.json"
+OUTPUT_DATSET_PATH = "/habitat-lab/data/custom_data_run0.json.gz"
+CSV_PATH = "/habitat-lab/data/run0.csv"
 lock = threading.Lock()
 
 def to_grid(pathfinder, points, grid_dimensions):
@@ -165,7 +173,7 @@ class sim_env(threading.Thread):
     _y_axis = 1
     _z_axis = 2
     _dt = 0.00478
-    _sensor_rate = 20  # hz
+    _sensor_rate = 50  # hz
     
     _current_episode = 0
     _total_number_of_episodes = 0
@@ -204,7 +212,7 @@ class sim_env(threading.Thread):
         sim_cfg = config['habitat']['simulator']
         self.control_frequency = int(np.floor(sim_cfg['ctrl_freq']/sim_cfg['ac_freq_ratio']))
         time_step = 1.0 / (self.control_frequency)
-        self.control_frequency = 1.0
+        self.control_frequency = 10
         self._r = rospy.Rate(self._sensor_rate)
         self._r_control = rospy.Rate(self.control_frequency)
         
@@ -215,14 +223,12 @@ class sim_env(threading.Thread):
         self._pub_all_agents = rospy.Publisher("~agent_poses", PoseArray, queue_size = 1)
         self._pub_door = rospy.Publisher("~door", MarkerArray, queue_size = 1)
         self._pub_goal_marker = rospy.Publisher("~goal", Marker, queue_size = 1)
+        self._pub_human_goal_marker = rospy.Publisher("~human_goal", Marker, queue_size = 1)
         self.cloud_pub = rospy.Publisher("top_down_img", PointCloud2, queue_size=2)
         self._pub_img_res = rospy.Publisher("img_res", Float64, queue_size= 1)
         self._reload_map_server = rospy.Publisher("reload_map_server", Bool, queue_size= 1)
-        # self._sub_wait = rospy.Subscriber("wait_for_traj", Bool, self.start_wait, queue_size = 1)
-        self._pub_start_ep = rospy.Publisher("start_ep", Bool, queue_size= 1)
+        self._sub_wait = rospy.Subscriber("wait_for_traj", Bool, self.start_wait, queue_size = 1)
         self._sub_path = rospy.Subscriber("irl_path", Path, self.get_path,  queue_size=1)
-        self._sub_cloud = rospy.Subscriber("got_cloud", Bool, self.got_cloud, queue_size=1)
-        self._pub_get_traj = rospy.Publisher("query_irl", Bool, queue_size= 1)
         # self.sub_traj = rospy.Subscriber("irl_traj", Int32MultiArray, self.get_irl_traj, queue_size = 1)
         self.br = tf.TransformBroadcaster()
         self.br_tf_2 = tf2_ros.TransformBroadcaster()
@@ -248,9 +254,9 @@ class sim_env(threading.Thread):
             agent_pos = self.env.sim.agents_mgr[i].articulated_agent.base_pos
             start_pos = [agent_pos[0], agent_pos[1], agent_pos[2]]
             initial_pos = list(to_grid(self.env._sim.pathfinder, start_pos, self.grid_dimensions))
-            agents_goal_pos_3d = [self.env.current_episode.info['human_start']]
+            agents_goal_pos_3d = [self.env.current_episode.info['robot_goal'], self.env.current_episode.info['human_goal']]
             agents_initial_velocity = [0.5,0.0]
-            goal_pos = list(to_grid(self.env._sim.pathfinder, agents_goal_pos_3d[0], self.grid_dimensions))
+            goal_pos = list(to_grid(self.env._sim.pathfinder, agents_goal_pos_3d[i], self.grid_dimensions))
             self.initial_state.append(initial_pos+agents_initial_velocity+goal_pos)
             self.objs.append(self.env.sim.agents_mgr[i].articulated_agent)
         self.linear_velocity = [0,0,0]
@@ -337,32 +343,36 @@ class sim_env(threading.Thread):
         self.current_point = None
         self.wait_counter = 0
         self.im_array = []
-        self.got_sem_cloud = False
-        self.actual_num_steps = 0
-        self.prev_current_point = None
-        self.drift_counter = 0
-        self.prev_query_time = rospy.Time.now()
-        self.cloud_wait_counter = 0
-        
+        self.new_dataset = RearrangeDatasetV0()
+        self.human_start_point = None
+        self.robot_start_point = None
+        self.human_goal_point = None 
+        self.robot_goal_point = None
+        with open(DATASET_PATH, 'r') as j:
+            self.all_episodes = json.loads(j.read())
+        # with open(PREV_OUTPUT_DATSET_PATH, 'r') as j:
+        #     eps = json.loads(j.read())["episodes"]
+        # for ep in eps:
+        #     self.new_dataset.episodes.append(ep)
     def reset(self):
         #### Save the results of the previous episode ####
-        metrics = self.env.get_metrics()
-        results_dict = {}
-        results_dict["num_steps"] = metrics["num_steps"]
-        results_dict["did_collide"] = metrics["did_collide"]
-        results_dict["robot_scene_collision"] = metrics["robot_collisions"]["robot_scene_colls"]
-        results_dict["social_nav_to_pos_success"] = metrics["social_nav_to_pos_success"]
-        results_dict["social_dist_to_goal"] = metrics["social_dist_to_goal"]
-        results_dict["avg_robot_to_human_dis_over_epi"] = metrics["social_nav_stats"]["avg_robot_to_human_dis_over_epi"]
-        results_dict["social_nav_reward"] = metrics["social_nav_reward"]
-        results_dict["actual_num_steps"] = self.actual_num_steps    
-        with open(CSV_PATH, "a", newline="") as fp:
-        # Create a writer object
-            writer = csv.DictWriter(fp, fieldnames=results_dict.keys())
-            if self._current_episode == 0:
-                writer.writeheader()
-            writer.writerow(results_dict)
-        #### Finish writing csv file ####
+        # metrics = self.env.get_metrics()
+        # results_dict = {}
+        # results_dict["num_steps"] = metrics["num_steps"]
+        # results_dict["did_collide"] = metrics["did_collide"]
+        # results_dict["robot_scene_collision"] = metrics["robot_collisions"]["robot_scene_colls"]
+        # results_dict["social_nav_to_pos_success"] = metrics["social_nav_to_pos_success"]
+        # results_dict["social_dist_to_goal"] = metrics["social_dist_to_goal"]
+        # results_dict["avg_robot_to_human_dis_over_epi"] = metrics["social_nav_stats"]["avg_robot_to_human_dis_over_epi"]
+        # results_dict["social_nav_reward"] = metrics["social_nav_reward"]
+        
+        # with open(CSV_PATH, "a", newline="") as fp:
+        # # Create a writer object
+        #     writer = csv.DictWriter(fp, fieldnames=metrics.keys())
+        #     if self._current_episode == 0:
+        #         writer.writeheader()
+        #     writer.writerow(metrics)
+        # #### Finish writing csv file ####
         self.observations = self.env.reset()
         meters_per_pixel =0.025
         map_name = "sample_map"
@@ -390,18 +400,27 @@ class sim_env(threading.Thread):
         self.map_to_base_link({'x': 0, 'y': 0, 'theta': self.get_object_heading(self.env.sim.agents_mgr[0].articulated_agent.base_transformation)})
         self._reload_map_server.publish(True)
         self.start_ep = False
-        self.im_array[0].save(SAVE_VIDEO_DIR + "/episode_" + str(self._current_episode) + ".gif", save_all=True, append_images=self.im_array[1:], duration=100, loop=0)
+        ### Saving images for video ####
+        # self.im_array[0].save(SAVE_VIDEO_DIR + "/episode_" + str(self.env.current_episode.episode_id) + ".gif", save_all=True, append_images=self.im_array[1:], duration=100, loop=0)
         self.im_array = []
-        self._current_episode += 1
-        self.got_sem_cloud = False
-        self.actual_num_steps = 0
-        self.prev_current_point = None
-        self.drift_counter = 0
-        self.cloud_wait_counter = 0
+        self.human_start_point = None
+        self.robot_start_point = None
+        self.human_goal_point = None
+        self.robot_goal_point = None
+        self._current_episode +=1
+        self.initial_state = []
+        self.number_of_agents = len(self.env.sim.agents_mgr)
+        self.objs = []
+        for i in range(self.number_of_agents):
+            agent_pos = self.env.sim.agents_mgr[i].articulated_agent.base_pos
+            start_pos = [agent_pos[0], agent_pos[1], agent_pos[2]]
+            initial_pos = list(to_grid(self.env._sim.pathfinder, start_pos, self.grid_dimensions))
+            agents_goal_pos_3d = [self.env.current_episode.info['robot_goal'], self.env.current_episode.info['human_goal']]
+            agents_initial_velocity = [0.5,0.0]
+            goal_pos = list(to_grid(self.env._sim.pathfinder, agents_goal_pos_3d[i], self.grid_dimensions))
+            self.initial_state.append(initial_pos+agents_initial_velocity+goal_pos)
+            self.objs.append(self.env.sim.agents_mgr[i].articulated_agent)
         rospy.sleep(10)
-
-    def got_cloud(self, msg):
-        self.got_sem_cloud = msg.data
 
     def img_to_grid(self):
         img = self.observations["agent_1_third_rgb"]
@@ -500,12 +519,11 @@ class sim_env(threading.Thread):
                 agent_pos = self.objs[i].base_pos
                 start_pos = [agent_pos[0], agent_pos[1], agent_pos[2]]
                 initial_pos = list(to_grid(self.env._sim.pathfinder, start_pos, self.grid_dimensions))
-                # agents_goal_pos_3d = [self.env._task.my_nav_to_info.robot_info.nav_goal_pos, self.env._task.my_nav_to_info.human_info.nav_goal_pos]
+                agents_goal_pos_3d = [self.env._task.my_nav_to_info.robot_info.nav_goal_pos, self.env._task.my_nav_to_info.human_info.nav_goal_pos]
                 agents_initial_velocity = [0.5,0.0]
-                # goal_pos = list(to_grid(self.env._sim.pathfinder, agents_goal_pos_3d[i], self.grid_dimensions))
-                self.initial_state[i][0:4] = initial_pos+agents_initial_velocity
-            if self.current_point is not None:
-                self.initial_state[0][4:6] = list(to_grid(self.env._sim.pathfinder, self.current_point, self.grid_dimensions))
+                goal_pos = list(to_grid(self.env._sim.pathfinder, agents_goal_pos_3d[i], self.grid_dimensions))
+                self.initial_state[i] = initial_pos+agents_initial_velocity+goal_pos
+                # if self.current_point is None:
             self._pub_rgb.publish(np.float32(rgb_with_res))
             self._pub_rgb_2.publish(np.float32(rgb2_with_res))
             self._pub_depth.publish(np.float32(depth_with_res))
@@ -522,59 +540,32 @@ class sim_env(threading.Thread):
         traj = []
         traj_2d = []
         norm_list = []
-        traj_interpolated = []
-        traj_interpolated_2d = []
         for pose in msg.poses:
             point_map = [pose.pose.position.x, pose.pose.position.y]
             p = [point_map[0]+1, point_map[1]+1]
             traj_2d.append(p)
-            p0 = np.array(self.initial_state[0][0:2]) 
-            diff_interp = np.array(p) - np.array(p0) 
-            norm_interp = np.linalg.norm(diff_interp)
-            p2 = diff_interp/norm_interp*0.4 + np.array(p0)
-            traj_interpolated_2d.append(p2)
-            p2_3d = from_grid(self.env._sim.pathfinder, [p2[0]/0.025, p2[1]/0.025], self.grid_dimensions)
             point_3d = from_grid(self.env._sim.pathfinder, [p[0]/0.025, p[1]/0.025], self.grid_dimensions)
             traj.append(point_3d)
-            traj_interpolated.append(p2_3d)
-            norm_list.append([np.linalg.norm(np.array(p) - np.array(p0))])   
+            norm_list.append([np.linalg.norm(np.array(p) - np.array(self.initial_state[0][0:2]))])   
         start_index = np.argmin(norm_list)
         traj = traj[start_index:]
         traj_2d = traj_2d[start_index:]
-        traj_interpolated = traj_interpolated[start_index:]
-        print("Robot drift is ", norm_list[0], start_index)
-        if start_index>2 and norm_list[0]>0.2:
-            print("The robot state has drifted from the initial state ", norm_list[0:start_index])
-            return
-        end_index = 2
-        print("Length of norm list is ", len(norm_list))
-        for i in range(len(norm_list)):
-            print("I is ", i)
-            print("Condition is ", norm_list[i][0]>=0.2 and i < len(norm_list)/2)
-            if norm_list[i][0]>=0.2 and i < len(norm_list)/2:
-                end_index = int(i)
-                break
-        print("chosen end index is ", end_index)
-        self.initial_state[0][4:6] = traj_2d[end_index]
-        self.current_point = np.array([traj[end_index][0], traj[end_index][1], traj[end_index][2]])
-
-
-        # if len(traj)<10:
-        #     self.initial_state[0][4:6] = traj_2d[-1]
-        #     self.current_point = np.array([traj[-1][0], traj[-1][1], traj[-1][2]])
-            
-        # else:
-        #     self.initial_state[0][4:6] = traj_2d[2]
-        #     self.current_point = np.array([traj[2][0], traj[2][1], traj[2][2]])
-        # if self.prev_current_point is None:
-        #     self.prev_current_point = self.current_point
-        # dist_to_goal = np.linalg.norm((np.array(self.prev_current_point)-np.array(self.objs[0].base_pos))[[0, 2]])
-        # if dist_to_goal > 0.3:
-        #     self.current_point = self.prev_current_point
-        print("Should execute trajectory now ")
-        self.waiting_for_traj = False
         
-        # self.update_agent_pos_vel()
+        if len(traj)<10:
+            self.initial_state[0][4:6] = traj_2d[-1]
+            self.current_point = np.array([traj[-1][0], traj[-1][1], traj[-1][2]])
+            
+        else:
+            self.initial_state[0][4:6] = traj_2d[9]
+            self.current_point = np.array([traj[9][0], traj[9][1], traj[9][2]])
+        self.waiting_for_traj = False
+        robot_final_goal = self.env.current_episode.info['robot_goal']
+        dist_to_goal = np.linalg.norm((robot_final_goal-self.current_point)[[0, 2]])
+        print("Distance to final goal is ", dist_to_goal)
+        if dist_to_goal <0.8:
+            self.current_point = robot_final_goal
+            print("Setting to robot final goal")
+        print("Current point is ", self.current_point)
         
         
 
@@ -584,68 +575,35 @@ class sim_env(threading.Thread):
             print("Done with episode and starting a new one")
             self.reset()
             return
-        if not self.got_sem_cloud:
-            self.cloud_wait_counter +=1
-            print("Didnt get cloud yet")
-            if self.cloud_wait_counter > 30:
-                self._reload_map_server.publish(True)
-                self.cloud_wait_counter = 0
-                print("Didnt get cloud yet")
-                return
+            
+        if not self.start_ep:
+            base_vel = [0.0, 0.0]
+            # print("Caught here ", not self.start_ep,  self.waiting_for_traj , self.current_point is None)
+            self.observations.update(self.env.step({"action": 'agent_0_base_velocity', "action_args":{"agent_0_base_vel":base_vel}}))
             return
-        # if not self.start_ep:
-        #     base_vel = [0.0, 0.0]
-        #     # print("Caught here ", not self.start_ep,  self.waiting_for_traj , self.current_point is None)
-        #     self.observations.update(self.env.step({"action": 'agent_0_base_velocity', "action_args":{"agent_0_base_vel":base_vel}}))
-        #     return
         self.wait_counter +=1
         dist_human_moved = np.linalg.norm(self.objs[1].base_pos -  self.env.current_episode.info['human_start'])
         print("Human has moved ", dist_human_moved)
         # if (self.wait_counter < HUMAN_HEAD_START):
         while (dist_human_moved<0.2):
-            self._pub_start_ep.publish(False)
             print("Giving the human a head start")
             k = 'agent_1_oracle_nav_randcoord_action'
             for i in range(1):
                 self.observations.update(self.env.step({"action":k, "action_args":{}}))
             dist_human_moved = np.linalg.norm(self.objs[1].base_pos -  self.env.current_episode.info['human_start'])
             return
-        self._pub_start_ep.publish(True)
-        self._pub_get_traj.publish(True)
-        
-        self.prev_query_time = rospy.Time.now()
-        self.waiting_for_traj = True
-        if self.current_point is not None:
-            robot_final_goal = self.env.current_episode.info['robot_goal']
-            dist_to_goal = np.linalg.norm((np.array(robot_final_goal)-np.array(self.current_point))[[0, 2]])
-            print("Distance to final goal is ", dist_to_goal)
-            if dist_to_goal <0.8:
-                self.current_point = robot_final_goal
-                self.waiting_for_traj = False
-                print("Setting to robot final goal")
-            print("Current point is ", self.current_point)
-        while self.current_point is None or self.waiting_for_traj:
-            # base_vel = [0.0, 0.0]
-            wait_time = (rospy.Time.now()-self.prev_query_time).to_sec()
-            if wait_time > 0.1:
-                print("Time between queries is ", (rospy.Time.now()-self.prev_query_time).to_sec())
-                self._pub_get_traj.publish(True)
-                self.prev_query_time = rospy.Time.now()
-                self.drift_counter +=1
-            if self.drift_counter >20:
-                print("Not sure what to do now")
-                # self._reload_map_server.publish(True)
-                self.drift_counter = 0
-            continue
-            # print("Caught here ", not self.start_ep,  self.waiting_for_traj , self.current_point is None)
-            # self.observations.update(self.env.step({"action": 'agent_0_base_velocity', "action_args":{"agent_0_base_vel":base_vel}}))
-            # return
+        self.reset()
+        if self.current_point is None:
+            base_vel = [0.0, 0.0]
+            print("Caught here ", not self.start_ep,  self.waiting_for_traj , self.current_point is None)
+            self.observations.update(self.env.step({"action": 'agent_0_base_velocity', "action_args":{"agent_0_base_vel":base_vel}}))
+            return
         ### When driving agent ####
         lin_vel = self.linear_velocity[2]
         ang_vel = self.angular_velocity[1]
         base_vel = [lin_vel, ang_vel]
         # self.env._episode_over = False
-        self.actual_num_steps +=1
+        
         ### When RL drives agent ####
         # base_vel = self.act()
         
@@ -654,14 +612,16 @@ class sim_env(threading.Thread):
         self.env.task.actions[k].step()
 
         k = 'agent_0_oracle_nav_randcoord_action'
-        self.env.task.actions[k].coord_nav = self.current_point### Read the point from the traj
+        # self.env.task.actions[k].coord_nav = self.current_point### Read the point from the traj
         
         coord_nav = self.current_point
-        # print("Coord nav here is ", coord_nav)
+        # # print("Coord nav here is ", coord_nav)
         self.observations.update(self.env.step({"action":k, "action_args":{"agent_0_oracle_nav_randcoord_action":coord_nav}}))
         # self.observations.update(self.env.step({"action": 'agent_0_base_velocity', "action_args":{"agent_0_base_vel":base_vel}}))
-        print("Moved here")
-        self.im_array.append(Image.fromarray(self.observations["agent_1_third_rgb"].astype(np.uint8)))
+        #### Saving images for video ####
+        # self.im_array.append(Image.fromarray(self.observations["agent_1_third_rgb"].astype(np.uint8)))
+
+
         #### Goal Follower agent ####
         # print("chosen action is ", self.goal_agent.act(self.observations))
         # print("Measurement is ", self.observations["dist_to_goal"])
@@ -690,10 +650,10 @@ class sim_env(threading.Thread):
         # self.observations.update(self.env.sim.get_sensor_observations())
         # base_vel = [0.0, 0.0]
         # self.observations.update()
-        # if self.replan_counter % int(self.control_frequency/self.replan_freq):
-        #     # self.img_to_grid()
-        #     self.replan_counter = 0
-        # self.replan_counter +=1
+        if self.replan_counter % int(self.control_frequency/self.replan_freq):
+            # self.img_to_grid()
+            self.replan_counter = 0
+        self.replan_counter +=1
 
     def get_object_heading(self,obj_transform):
         a = obj_transform
@@ -907,36 +867,127 @@ class sim_env(threading.Thread):
         goal_marker.pose.orientation.y = 0.0
         goal_marker.pose.orientation.z = 0.0
         goal_marker.pose.orientation.w = 1.0
-        goal_marker.scale.x = 0.5
-        goal_marker.scale.y = 0.5
-        goal_marker.scale.z = 0.5
+        goal_marker.scale.x = 0.2
+        goal_marker.scale.y = 0.2
+        goal_marker.scale.z = 0.2
         goal_marker.color.a = 1.0         
         goal_marker.color.r = 0.0
         goal_marker.color.g = 1.0
         goal_marker.color.b = 0.0
         self._pub_goal_marker.publish(goal_marker)
+        goal_marker = Marker()
+        goal_marker.header.frame_id = "my_map_frame"
+        goal_marker.type = 2
+        goal_marker.pose.position.x = self.initial_state[1][4]-1
+        goal_marker.pose.position.y = self.initial_state[1][5]-1
+        goal_marker.pose.position.z = 0.0
+        goal_marker.pose.orientation.x = 0.0
+        goal_marker.pose.orientation.y = 0.0
+        goal_marker.pose.orientation.z = 0.0
+        goal_marker.pose.orientation.w = 1.0
+        goal_marker.scale.x = 0.2
+        goal_marker.scale.y = 0.2
+        goal_marker.scale.z = 0.2
+        goal_marker.color.a = 1.0         
+        goal_marker.color.r = 0.0
+        goal_marker.color.g = 0.0
+        goal_marker.color.b = 1.0
+        self._pub_human_goal_marker.publish(goal_marker)
         
 
     def point_callback(self, msg):
+        
         point_map = [msg.point.x, msg.point.y, msg.point.z]
         p = [point_map[0]+1, point_map[1]+1]
         point_3d = from_grid(self.env._sim.pathfinder, [p[0]/0.025, p[1]/0.025], self.grid_dimensions)
-        print("Placing human at ",point_3d)
-        k = 'agent_1_oracle_nav_randcoord_action'
-        # chance = np.random.randn(1)
-        # if chance>0.5:
-        self.env.task.actions[k].coord_nav = np.array([point_3d[0], point_3d[1], point_3d[2]])
-        self.env._task.my_nav_to_info.human_info.nav_goal_pos = np.array([point_3d[0], point_3d[1], point_3d[2]])
-        print("setting human goal to ",point_3d)
-        self.start_ep = True
+        if self.robot_goal_point is None:
+            k = 'agent_0_oracle_nav_randcoord_action'
+            # chance = np.random.randn(1)
+            # if chance>0.5:
+            self.robot_goal_point = np.array(point_3d)
+            self.env.task.actions[k].coord_nav = np.array([point_3d[0], point_3d[1], point_3d[2]])
+            self.env._task.my_nav_to_info.robot_info.nav_goal_pos = np.array([point_3d[0], point_3d[1], point_3d[2]])
+            self.env.current_episode.info['robot_goal'] = np.array([point_3d[0], point_3d[1], point_3d[2]])
+            print("setting robot goal to ",point_3d)
+            return
+        elif self.human_goal_point is None:
+            k = 'agent_1_oracle_nav_randcoord_action'
+            # chance = np.random.randn(1)
+            # if chance>0.5:
+            self.human_goal_point = np.array(point_3d)
+            self.env.task.actions[k].coord_nav = np.array([point_3d[0], point_3d[1], point_3d[2]])
+            self.env._task.my_nav_to_info.human_info.nav_goal_pos = np.array([point_3d[0], point_3d[1], point_3d[2]])
+            self.env.current_episode.info['human_goal'] = np.array([point_3d[0], point_3d[1], point_3d[2]])
+            print("setting human goal to ",point_3d)
+            return
+        
+        if self.robot_goal_point is not None and self.human_goal_point is not None:
+            if self.robot_start_point is not None and self.human_start_point is not None:     
+                for eps in self.all_episodes["episodes"]:
+                    ep = copy.deepcopy(eps)
+                    if ep["scene_id"] == self.env.current_episode.scene_id and ep["info"]["door_start"] == self.env.current_episode.info["door_start"]:
+                        ep["start_position"] = self.env.current_episode.start_position
+                        ep["start_rotation"] = np.array(self.env.current_episode.start_rotation)
+                        new_ep_info = copy.deepcopy(ep["info"])
+                        new_ep_info["human_start"] = self.env.current_episode.info["human_start"]
+                        new_ep_info["robot_goal"] = self.robot_goal_point
+                        new_ep_info["human_goal"] = self.human_goal_point
+                        new_ep_info["human_rot"] = self.env.current_episode.info["human_rot"]
+                        ep["info"] = copy.deepcopy(new_ep_info)
+                        ep["episode_id"] = len(self.new_dataset.episodes)+1
+                        self.new_dataset.episodes.append(ep)
+                        break
+            # a = input("Finished entering episodes? ")
+            # if a == 'y':
+                with gzip.open(OUTPUT_DATSET_PATH, "wt") as f:
+                    f.write(self.new_dataset.to_json())
+                print("Great, select the next episode!")
+                self.start_ep = True
+    
         
     def pose_callback(self, msg):
         point_map = [msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z]
+        orientation = [msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w]
         p = [point_map[0]+1, point_map[1]+1]
         point_3d = from_grid(self.env._sim.pathfinder, [p[0]/0.025, p[1]/0.025], self.grid_dimensions)
-        print("Setting robot goal at  ",point_3d)
-        self.current_point = np.array([point_3d[0], point_3d[1], point_3d[2]])
-        self.start_ep = True
+        if self.robot_start_point is None:
+            self.robot_start_point = np.array(point_3d)
+            self.env.current_episode.start_position = self.robot_start_point
+            self.env.sim.agents_mgr[0].articulated_agent.base_pos = mn.Vector3(self.robot_start_point)
+            self.env.sim.agents_mgr[0].articulated_agent.base_rot = -euler_from_quaternion(orientation)[2]
+            agent_root = self.env.sim.agents_mgr[0].articulated_agent.sim_obj.transformation
+            rotation_quat = mn.Quaternion.from_matrix(agent_root.rotation())
+            self.env.current_episode.start_rotation = np.array([0,0,self.env.sim.agents_mgr[0].articulated_agent.base_rot,1])  
+            print("Placing robot at ",point_3d)
+            return
+        elif self.human_start_point is None:
+            self.human_start_point = np.array(point_3d)
+            self.env.current_episode.info['human_start'] = self.human_start_point
+            self.env.sim.agents_mgr[1].articulated_agent.base_pos = mn.Vector3(self.human_start_point)
+            self.env.sim.agents_mgr[1].articulated_agent.base_rot = -euler_from_quaternion(orientation)[2]
+            agent_root = self.env.sim.agents_mgr[1].articulated_agent.sim_obj.transformation
+            rotation_quat = mn.Quaternion.from_matrix(agent_root.rotation())
+            self.env.current_episode.info['human_rot'] = np.array([0,0,self.env.sim.agents_mgr[1].articulated_agent.base_rot,1])  
+            print("Placing human at ",point_3d)
+            return
+        
+        
+        if self.robot_goal_point is not None and self.human_goal_point is not None:
+            if self.robot_start_point is not None and self.human_start_point is not None:                
+                for eps in self.all_episodes["episodes"]:
+                    ep = eps.copy()
+                    if ep["scene_id"] == self.env.current_episode.scene_id and ep["info"]["door_start"] == self.env.current_episode.info["door_start"]:
+                        ep["start_position"] = self.env.current_episode.start_position
+                        ep["start_rotation"] = np.array(self.env.current_episode.start_rotation)
+                        ep["info"].update(self.env.current_episode.info)
+                        ep["episode_id"] = len(self.new_dataset.episodes)+1
+                        self.new_dataset.episodes.append(ep)
+                        break
+            # a = input("Finished entering episodes? ")
+            # if a == 'y':
+                with gzip.open(OUTPUT_DATSET_PATH, "wt") as f:
+                    f.write(self.new_dataset.to_json())
+                self.start_ep = True
 
 def callback(vel, my_env):
     #### Robot Control ####
@@ -1082,10 +1133,7 @@ if __name__ == "__main__":
     my_env.start()
     rospy.Subscriber("/cmd_vel", Twist, callback, (my_env), queue_size=1)
     while not rospy.is_shutdown():
-        # if my_env.current_point is None:
+   
         my_env.update_agent_pos_vel()
-            # my_env._r_control.sleep()
-            # continue
-        # else:
-            # rospy.spin()
+        # rospy.spin()
         my_env._r_control.sleep()

@@ -37,12 +37,15 @@ import json
 
 if __name__ == "__main__":
     dataset = RearrangeDatasetV0()
-    json_file_path = "/habitat-lab/data/social_nav_episode_0415_570.json"
-    output_path = "/habitat-lab/data/social_nav_episode_0415_samples.json.gz"
+    json_file_path = "/habitat-lab/data/test_dataset.json"
+    output_path = "/habitat-lab/data/test_dataset.json.gz"
     with open(json_file_path, 'r') as j:
         contents = json.loads(j.read())
-    
-    for i in range(11, 15):
+    remove_list = [0,1,2,4,5,6,7,9,10]
+    for i in range(len(contents['episodes'])):
+        if contents['episodes'][i]['episode_id'] in remove_list:
+            continue
         dataset.episodes.append(contents['episodes'][i])
+    
     with gzip.open(output_path, "wt") as f:
         f.write(dataset.to_json())
