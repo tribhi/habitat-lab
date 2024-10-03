@@ -103,7 +103,10 @@ class PddlSocialNavTask(PddlTask):
             nav_to_pos = np.array(episode.info["robot_goal"])
         elif agent_idx == 1: #human
             articulated_agent_pos = np.array(episode.info["human_start"])
-            articulated_agent_angle = episode.info["human_rot"][2]
+            try:
+                articulated_agent_angle = episode.info["human_rot"][2]
+            except:
+                articulated_agent_angle = 0.0
             nav_to_pos = np.array(episode.info["human_goal"])
         # print("agent_idx: ", agent_idx,"robot nav_to_pos: ", nav_to_pos)
         # print("Articulated_agent pos & angle: ", articulated_agent_pos, articulated_agent_angle)

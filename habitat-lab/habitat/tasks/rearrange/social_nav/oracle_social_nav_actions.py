@@ -85,6 +85,7 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
         final_nav_targ, obj_targ_pos = self._get_target_for_coord( #debug
             nav_to_target_coord
         )
+        door_pos = (np.array(self._sim.ep_info.info["door_start"]) + np.array(self._sim.ep_info.info["door_end"]))/2
         # if self.motion_type == "human_joints":
         #     final_nav_targ = self._task.my_nav_to_info.human_info.nav_goal_pos #kl
         #     obj_targ_pos  = self._task.my_nav_to_info.human_info.nav_goal_pos
@@ -113,22 +114,22 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
             robot_forward = robot_forward[[0, 2]]
             rel_targ = rel_targ[[0, 2]]
             rel_pos = (obj_targ_pos - robot_pos)[[0, 2]]
-
+            rel_door_pos = (door_pos - robot_pos)[[0, 2]]
             angle_to_target = get_angle(robot_forward, rel_targ)
             angle_to_obj = get_angle(robot_forward, rel_pos)
-
+            angle_to_door = get_angle(robot_forward, rel_door_pos)
             dist_to_final_nav_targ = np.linalg.norm(
                 (final_nav_targ - robot_pos)[[0, 2]]
             )
-            
+            self._config.dist_thresh = 0.1
             at_goal = (
                 dist_to_final_nav_targ < self._config.dist_thresh
-                and angle_to_obj < self._config.turn_thresh
+                and angle_to_door < self._config.turn_thresh # Used to be abgle to obj, TK
             ) or dist_to_final_nav_targ < self._config.dist_thresh / 10.0
             if self.motion_type == "base_velocity":
                 # print("Current nav path is ", curr_path_points)
-                print("Robot pose and current nav target is ", robot_pos, final_nav_targ)
-                
+                # print("Robot pose and current nav target is ", robot_pos, final_nav_targ)
+                # print("Dist to goal is ", dist_to_final_nav_targ, self._config.dist_thresh)
                 if not at_goal:
                     backward = np.array([-1.0, 0, 0])
                     robot_backward = np.array(
@@ -166,10 +167,12 @@ class OracleNavCoordAction(OracleNavAction):  # type: ignore
                                 robot_backward,
                             )
                     else:
+                        
                         if dist_to_final_nav_targ < self._config.dist_thresh:
                             # Look at the object
+                            print("Looking to the door now")
                             vel = OracleNavAction._compute_turn(
-                                rel_pos,
+                                rel_door_pos,  # Used to be rel_pos, TK
                                 self._config.turn_velocity,
                                 robot_forward,
                             )
@@ -276,10 +279,9 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
         facing = (
             robot_human_vec_dot_product(robot_pos, human_pos, base_T) > 0.5
         )
-
         # Use geodesic distance here
         dis = self._sim.geodesic_distance(robot_pos, human_pos)
-
+        
         return dis <= 2.0 and facing
 
     def _compute_robot_to_human_min_step(
@@ -296,9 +298,10 @@ class OracleNavRandCoordAction(OracleNavCoordAction):  # type: ignore
         # Compute the step taken to reach the human
         robot_pos = np.array(base_T.translation)
         robot_pos[1] = human_pos[1]
+        self._reach_human(robot_pos, human_pos, base_T)
         step_taken = 0
         while (
-            not self._reach_human(robot_pos, human_pos, base_T)
+            not self._reach_human(robot_pos, human_pos, base_T) 
             and step_taken <= 1500
         ):
             path_points = self._find_path_given_start_end(robot_pos, human_pos)

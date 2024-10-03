@@ -86,7 +86,7 @@ class sim_env(threading.Thread):
             )
             rgb2_with_res = np.concatenate(
                 (
-                    np.float32(self.observations["agent_1_head_rgb"].ravel()),
+                    np.float32(self.observations["agent_1_third_rgb"].ravel()),
                     np.array(
                         [224,224]
                     ),
@@ -290,8 +290,8 @@ if __name__ == "__main__":
     for i in range (800):
    
         my_env.update_agent_pos_vel()
-        im_0 = my_env.observations["agent_1_head_rgb"]
-        im_1 = my_env.observations["agent_0_third_rgb"]
+        # im_0 = my_env.observations["agent_1_head_rgb"]
+        im_1 = my_env.observations["agent_1_third_rgb"]
         # top_down_map = maps.get_topdown_map_from_sim(
         #     cast("HabitatSim", my_env.env.sim), map_resolution=1024
         # )
@@ -300,7 +300,7 @@ if __name__ == "__main__":
         # )
         # top_down_map = recolor_map[top_down_map]
 
-        human_images.append(im_0)
+        # human_images.append(im_0)
         robot_images.append(im_1)
     # cv2.imwrite("top_down_map.jpg", top_down_map)
     images_to_video(human_images, "test", "human_trajectory")

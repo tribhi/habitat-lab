@@ -104,9 +104,10 @@ MAP_DIR = "/home/catkin_ws/src/habitat_ros_interface/maps/"
 THIRD_RGB_SIZE = 128
 GRID_SIZE = 6
 HUMAN_HEAD_START = 0       #60
-DATASET_PATH = "/habitat-lab/data/social_nav_episode_0415_samples.json"
-PREV_OUTPUT_DATSET_PATH = "/habitat-lab/data/custom_data_run0.json"
-OUTPUT_DATSET_PATH = "/habitat-lab/data/custom_data_run0.json.gz"
+DATASET_PATH = "/habitat-lab/data/scene_wise/test_dataset15.json"
+PREV_OUTPUT_DATSET_PATH = "/habitat-lab/data/scene_wise/test_dataset15.json"
+OUTPUT_DATSET_PATH = "/habitat-lab/data/scene_wise/test_dataset15_final.json.gz"
+
 CSV_PATH = "/habitat-lab/data/run0.csv"
 lock = threading.Lock()
 
@@ -350,10 +351,10 @@ class sim_env(threading.Thread):
         self.robot_goal_point = None
         with open(DATASET_PATH, 'r') as j:
             self.all_episodes = json.loads(j.read())
-        # with open(PREV_OUTPUT_DATSET_PATH, 'r') as j:
-        #     eps = json.loads(j.read())["episodes"]
-        # for ep in eps:
-        #     self.new_dataset.episodes.append(ep)
+        with open(PREV_OUTPUT_DATSET_PATH, 'r') as j:
+            eps = json.loads(j.read())["episodes"]
+        for ep in eps:
+            self.new_dataset.episodes.append(ep)
     def reset(self):
         #### Save the results of the previous episode ####
         # metrics = self.env.get_metrics()

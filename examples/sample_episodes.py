@@ -37,11 +37,11 @@ import json
 
 if __name__ == "__main__":
     dataset = RearrangeDatasetV0()
-    json_file_path = "/habitat-lab/data/test_dataset.json"
-    output_path = "/habitat-lab/data/test_dataset.json.gz"
+    json_file_path = "/habitat-lab/data/scene_wise/test_dataset15_final.json"
+    output_path = "/habitat-lab/data/test_dataset15_final_final.json.gz"
     with open(json_file_path, 'r') as j:
         contents = json.loads(j.read())
-    remove_list = [0,1,2,4,5,6,7,9,10]
+    remove_list = [18,17,15,12,14]
     for i in range(len(contents['episodes'])):
         if contents['episodes'][i]['episode_id'] in remove_list:
             continue

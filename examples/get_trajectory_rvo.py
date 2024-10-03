@@ -107,12 +107,12 @@ class ped_rvo():
         self.neighbor_dist = self.config.get('orca_neighbor_dist', 2)
         self.max_neighbors = self.num_pedestrians
         self.time_horizon = self.config.get('orca_time_horizon', 4.0)  # 2.0
-        self.time_horizon_obst = self.config.get('orca_time_horizon_obst', 2.0)
-        self.orca_radius = self.config.get('orca_radius', 0.35)
+        self.time_horizon_obst = self.config.get('orca_time_horizon_obst', 0.5)
+        self.orca_radius = self.config.get('orca_radius', 0.40)
         self.orca_max_speed = self.config.get('orca_max_speed', 1.3)
         self.dt = 1.0 / (my_env.control_frequency)
         print("DT is", self.dt)
-        self.dt = 1/60
+        self.dt = 1/12   # 1/12 usually
         self.backup_pos = None
         self.orca_sim = rvo2.PyRVOSimulator(
             self.dt,
@@ -133,13 +133,13 @@ class ped_rvo():
         initial_state = my_env.initial_state
         for i in range(len(initial_state)):
             if i==0:
-                self.orca_ped.append(self.orca_sim.addAgent((initial_state[i][0],initial_state[i][1]), velocity = (initial_state[i][2], initial_state[i][3]), radius = 0.55))
+                self.orca_ped.append(self.orca_sim.addAgent((initial_state[i][0],initial_state[i][1]), velocity = (initial_state[i][2], initial_state[i][3]), radius = 0.25))
             else:
                 self.orca_ped.append(self.orca_sim.addAgent((initial_state[i][0],initial_state[i][1]), velocity = (initial_state[i][2], initial_state[i][3])))
             desired_vel = np.array([initial_state[i][4] - initial_state[i][0], initial_state[i][5]-initial_state[i][1]]) 
             desired_vel = desired_vel/np.linalg.norm(desired_vel) * self.orca_max_speed
             self.orca_sim.setAgentPrefVelocity(self.orca_ped[i], tuple(desired_vel))
-        self.orca_sim.setAgentRadius(self.orca_ped[0], 0.55)
+        self.orca_sim.setAgentRadius(self.orca_ped[0], 0.40)
         # img = Image.open("/Py_Social_ROS/default.pgm").convert('L')
         # img.show()
         # img_np = np.array(img)  # ndarray
@@ -296,17 +296,27 @@ class ped_rvo():
     def reset_peds(self, initial_state):
         for i in range(len(initial_state)):
             self.orca_sim.setAgentPosition(self.orca_ped[i],(initial_state[i][0],initial_state[i][1]))
+            self.orca_sim.setAgentVelocity(self.orca_ped[i], (initial_state[i][2], initial_state[i][3]))
             desired_vel = np.array([initial_state[i][4] - initial_state[i][0], initial_state[i][5]-initial_state[i][1]]) 
-            desired_vel = desired_vel/np.linalg.norm(desired_vel) * self.orca_max_speed
-            self.orca_sim.setAgentPrefVelocity(self.orca_ped[i], tuple(desired_vel))
-        self.orca_sim.setAgentRadius(self.orca_ped[0], 0.55)
+            if np.linalg.norm(desired_vel) > 0.2:
+                desired_vel = desired_vel/np.linalg.norm(desired_vel) * self.orca_max_speed
+                self.orca_sim.setAgentPrefVelocity(self.orca_ped[i], tuple(desired_vel))
+            else:
+                self.orca_sim.setAgentPrefVelocity(self.orca_ped[i], (0,0))
+            self.orca_sim.setAgentVelocity(self.orca_ped[i], tuple(desired_vel))
+            print("Desired velocity for agent ", i ," is ", desired_vel)
 
     def get_future_position(self,initial_state, sampled_goals = None, num_steps = 1000):
         print("Initial state is ",initial_state)
+        # self.reset_peds(initial_state)
         vels = []
+        colors = plt.cm.rainbow(np.linspace(0, 1, len(initial_state)))
+        self.ax.plot(initial_state[0][0], initial_state[0][1], "-o", label=f"ped {0}", markersize=2.5, color=colors[0])
+        self.ax.plot(initial_state[0][4], initial_state[0][5], "-x", label=f"ped {0}", markersize=2.5, color=colors[0])
+        self.ax.plot(initial_state[1][0], initial_state[1][1], "-o", label=f"ped {1}", markersize=2.5, color=colors[1])
+        self.ax.plot(initial_state[1][4], initial_state[1][5], "-x", label=f"ped {1}", markersize=2.5, color=colors[1])
         for i in range(num_steps):
             self.orca_sim.doStep()
-            colors = plt.cm.rainbow(np.linspace(0, 1, len(initial_state)))
             vel = []
             position = []
             for j in range(len(initial_state)):
@@ -315,32 +325,39 @@ class ped_rvo():
                 vely = (y - initial_state[j][1])/((i+1)*self.dt)
                 vel.append([velx,vely])
                 position.append([x,y])
+                
                 # print(velx,vely)
                 # if (i == num_steps-1):
                 self.ax.plot(x, y, "-o", label=f"ped {j}", markersize=0.5, color=colors[j])
             vels.append(vel)
+        # print("Velocities inside are ", vels)
             # if np.all(vel[0] == [0.0,0.0] and vel[1] == [0.0,0.0]):
             #     print("Stopping at step", i)
             #     break
             # if (self.update_number == self.max_counter):
         if True:
-            print("saving the offline plot!!")
-            self.fig.savefig("rvo2_img"+str(self.update_number)+".png", dpi=300)
+            # print("saving the offline plot!!")
+            # self.fig.savefig("rvo2_img"+str(self.update_number)+".png", dpi=300)
             plt.close(self.fig)
             self.fig, self.ax = plt.subplots()
             self.plot_obstacles()
         self.update_number+=1
-        print("Rteunring position", position)
-        if np.linalg.norm(vel[0]) <0.1 and num_steps > 100 and self.agent_backed == False:
-            des_vel = self.orca_sim.getAgentPrefVelocity(self.orca_ped[0])
-            position[0] = initial_state[0][0:2] - des_vel
-            print(position)
-            self.backup_pos = position[0]
-            self.agent_backed = True
-            return np.array(position)
-        if np.linalg.norm(vel[0]) < 0.5 and num_steps > 100 and self.agent_backed == True:
-            position[0] = self.backup_pos
-            return np.array(position)
+        print("Velocities are ", self.orca_sim.getAgentVelocity(self.orca_ped[0]), self.orca_sim.getAgentVelocity(self.orca_ped[1]))
+        print("Agent radius is ", self.orca_sim.getAgentRadius(self.orca_ped[0]), self.orca_sim.getAgentRadius(self.orca_ped[1]))
+        position[0] = self.orca_sim.getAgentPosition(self.orca_ped[0])
+        position[1] = self.orca_sim.getAgentPosition(self.orca_ped[1])
+
+        # print("Rteunring position", position)
+        # if np.linalg.norm(vel[0]) <0.1 and num_steps > 100 and self.agent_backed == False:
+        #     des_vel = self.orca_sim.getAgentPrefVelocity(self.orca_ped[0])
+        #     position[0] = initial_state[0][0:2] - des_vel
+        #     print(position)
+        #     self.backup_pos = position[0]
+        #     self.agent_backed = True
+        #     return np.array(position)
+        # if np.linalg.norm(vel[0]) < 0.5 and num_steps > 100 and self.agent_backed == True:
+        #     position[0] = self.backup_pos
+        #     return np.array(position)
         # self.reset_peds(initial_state)
         
         return np.array(position)

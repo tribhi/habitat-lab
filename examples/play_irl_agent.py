@@ -93,13 +93,13 @@ from IPython import embed
 DEFAULT_POSE_PATH = "data/humanoids/humanoid_data/walking_motion_processed.pkl"
 DEFAULT_CFG = "benchmark/rearrange/play/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
-SAVE_VIDEO_DIR = "/habitat-lab/data/vids/Run_1_Jun_28"
+SAVE_VIDEO_DIR = "/habitat-lab/data/vids/Run_0_Aug_27/exp_7.4"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
 MAP_DIR = "/home/catkin_ws/src/habitat_ros_interface/maps/"
 THIRD_RGB_SIZE = 128
 GRID_SIZE = 6
 HUMAN_HEAD_START = 0       #60
-CSV_PATH = "/habitat-lab/data/vids/Run_1_Jun_28/results.csv"
+CSV_PATH = "/habitat-lab/data/vids/Run_0_Aug_27/exp_7.4/results.csv"
 lock = threading.Lock()
 
 def to_grid(pathfinder, points, grid_dimensions):
@@ -199,7 +199,6 @@ class sim_env(threading.Thread):
         f.write("origin: [" + str(-1) + "," + str(-self.grid_dimensions[0]*meters_per_pixel+1) + ", 0.000000]\n")
         f.write("negate: 0\noccupied_thresh: 0.65\nfree_thresh: 0.196")
         f.close()
-        
         rospy.init_node("sim", anonymous=False)
         sim_cfg = config['habitat']['simulator']
         self.control_frequency = int(np.floor(sim_cfg['ctrl_freq']/sim_cfg['ac_freq_ratio']))
@@ -248,9 +247,9 @@ class sim_env(threading.Thread):
             agent_pos = self.env.sim.agents_mgr[i].articulated_agent.base_pos
             start_pos = [agent_pos[0], agent_pos[1], agent_pos[2]]
             initial_pos = list(to_grid(self.env._sim.pathfinder, start_pos, self.grid_dimensions))
-            agents_goal_pos_3d = [self.env.current_episode.info['human_start']]
+            agents_goal_pos_3d = [self.env.current_episode.info['robot_goal'], self.env.current_episode.info['human_goal']]
             agents_initial_velocity = [0.5,0.0]
-            goal_pos = list(to_grid(self.env._sim.pathfinder, agents_goal_pos_3d[0], self.grid_dimensions))
+            goal_pos = list(to_grid(self.env._sim.pathfinder, agents_goal_pos_3d[i], self.grid_dimensions))
             self.initial_state.append(initial_pos+agents_initial_velocity+goal_pos)
             self.objs.append(self.env.sim.agents_mgr[i].articulated_agent)
         self.linear_velocity = [0,0,0]
@@ -355,7 +354,9 @@ class sim_env(threading.Thread):
         results_dict["social_dist_to_goal"] = metrics["social_dist_to_goal"]
         results_dict["avg_robot_to_human_dis_over_epi"] = metrics["social_nav_stats"]["avg_robot_to_human_dis_over_epi"]
         results_dict["social_nav_reward"] = metrics["social_nav_reward"]
-        results_dict["actual_num_steps"] = self.actual_num_steps    
+        results_dict["actual_num_steps"] = self.actual_num_steps   
+        results_dict["ep_no"] =  self.env.current_episode.episode_id
+        results_dict["drift_counter"] = self.drift_counter
         with open(CSV_PATH, "a", newline="") as fp:
         # Create a writer object
             writer = csv.DictWriter(fp, fieldnames=results_dict.keys())
@@ -398,6 +399,16 @@ class sim_env(threading.Thread):
         self.prev_current_point = None
         self.drift_counter = 0
         self.cloud_wait_counter = 0
+        self.initial_state = []
+        for i in range(self.number_of_agents):
+            agent_pos = self.env.sim.agents_mgr[i].articulated_agent.base_pos
+            start_pos = [agent_pos[0], agent_pos[1], agent_pos[2]]
+            initial_pos = list(to_grid(self.env._sim.pathfinder, start_pos, self.grid_dimensions))
+            agents_goal_pos_3d = [self.env.current_episode.info['robot_goal'], self.env.current_episode.info['human_goal']]
+            agents_initial_velocity = [0.5,0.0]
+            goal_pos = list(to_grid(self.env._sim.pathfinder, agents_goal_pos_3d[i], self.grid_dimensions))
+            self.initial_state.append(initial_pos+agents_initial_velocity+goal_pos)
+            self.objs.append(self.env.sim.agents_mgr[i].articulated_agent)
         rospy.sleep(10)
 
     def got_cloud(self, msg):
@@ -504,8 +515,8 @@ class sim_env(threading.Thread):
                 agents_initial_velocity = [0.5,0.0]
                 # goal_pos = list(to_grid(self.env._sim.pathfinder, agents_goal_pos_3d[i], self.grid_dimensions))
                 self.initial_state[i][0:4] = initial_pos+agents_initial_velocity
-            if self.current_point is not None:
-                self.initial_state[0][4:6] = list(to_grid(self.env._sim.pathfinder, self.current_point, self.grid_dimensions))
+            # if self.current_point is not None:
+            #     self.initial_state[0][4:6] = list(to_grid(self.env._sim.pathfinder, self.current_point, self.grid_dimensions))
             self._pub_rgb.publish(np.float32(rgb_with_res))
             self._pub_rgb_2.publish(np.float32(rgb2_with_res))
             self._pub_depth.publish(np.float32(depth_with_res))
@@ -543,19 +554,20 @@ class sim_env(threading.Thread):
         traj_2d = traj_2d[start_index:]
         traj_interpolated = traj_interpolated[start_index:]
         print("Robot drift is ", norm_list[0], start_index)
-        if start_index>2 and norm_list[0]>0.2:
+        if start_index>1 and norm_list[0]>0.1:
             print("The robot state has drifted from the initial state ", norm_list[0:start_index])
             return
-        end_index = 2
-        print("Length of norm list is ", len(norm_list))
-        for i in range(len(norm_list)):
-            print("I is ", i)
-            print("Condition is ", norm_list[i][0]>=0.2 and i < len(norm_list)/2)
-            if norm_list[i][0]>=0.2 and i < len(norm_list)/2:
-                end_index = int(i)
-                break
+        end_index = len(traj_2d)-1
+        end_index = 20
+        # print("Length of norm list is ", len(norm_list))
+        # for i in range(len(norm_list)):
+        #     print("I is ", i)
+        #     print("Condition is ", norm_list[i][0]>=0.2 and i < len(norm_list)/2)
+        #     if norm_list[i][0]>=0.2 and i < len(norm_list)/2:
+        #         end_index = int(i)
+        #         break
         print("chosen end index is ", end_index)
-        self.initial_state[0][4:6] = traj_2d[end_index]
+        # self.initial_state[0][4:6] = traj_2d[end_index]
         self.current_point = np.array([traj[end_index][0], traj[end_index][1], traj[end_index][2]])
 
 
@@ -636,6 +648,9 @@ class sim_env(threading.Thread):
                 print("Not sure what to do now")
                 # self._reload_map_server.publish(True)
                 self.drift_counter = 0
+            if self.drift_counter >100000:
+                self.reset()
+                return
             continue
             # print("Caught here ", not self.start_ep,  self.waiting_for_traj , self.current_point is None)
             # self.observations.update(self.env.step({"action": 'agent_0_base_velocity', "action_args":{"agent_0_base_vel":base_vel}}))
@@ -915,6 +930,7 @@ class sim_env(threading.Thread):
         goal_marker.color.g = 1.0
         goal_marker.color.b = 0.0
         self._pub_goal_marker.publish(goal_marker)
+
         
 
     def point_callback(self, msg):

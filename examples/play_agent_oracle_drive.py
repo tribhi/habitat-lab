@@ -107,7 +107,7 @@ HUMAN_HEAD_START = 0       #60
 DATASET_PATH = "/habitat-lab/data/social_nav_episode_0415_samples.json"
 PREV_OUTPUT_DATSET_PATH = "/habitat-lab/data/custom_data_run0.json"
 OUTPUT_DATSET_PATH = "/habitat-lab/data/custom_data_run0.json.gz"
-CSV_PATH = "/habitat-lab/data/data_metrics/Jun_26/run0.csv"
+CSV_PATH = "/habitat-lab/data/data_metrics/Jul_24/run0.csv"
 lock = threading.Lock()
 
 def to_grid(pathfinder, points, grid_dimensions):
@@ -368,7 +368,7 @@ class sim_env(threading.Thread):
         results_dict["social_dist_to_goal"] = metrics["social_dist_to_goal"]
         results_dict["avg_robot_to_human_dis_over_epi"] = metrics["social_nav_stats"]["avg_robot_to_human_dis_over_epi"]
         results_dict["social_nav_reward"] = metrics["social_nav_reward"]
-        
+        results_dict["ep_no"] =  self.env.current_episode.episode_id
         with open(CSV_PATH, "a", newline="") as fp:
         # Create a writer object
             writer = csv.DictWriter(fp, fieldnames=results_dict.keys())
